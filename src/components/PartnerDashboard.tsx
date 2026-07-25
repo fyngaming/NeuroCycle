@@ -265,6 +265,8 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
         approvedAt: new Date().toISOString(), 
         userUid: userUid || tx.userUid || '',
         partnerId: partner?.id || tx.partnerId || '',
+        partnerName: partner?.name || tx.partnerName || '',
+        institutionId: partner?.institutionId || tx.institutionId || null,
         items: depositItems,
         totalWeight,
         totalPoints,

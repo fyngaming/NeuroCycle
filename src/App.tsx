@@ -1855,6 +1855,8 @@ const WasteBankVerify = ({
           await setDoc(txRef, {
             partnerUid: selectedPartner?.id || null,
             partnerId: selectedPartnerId,
+            partnerName: selectedPartner?.name || '',
+            institutionId: selectedPartner?.institutionId || null,
             userUid,
             userToken: qrToken,
             status: 'pending',
@@ -6729,7 +6731,7 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
     useEffect(() => {
       if (!institutionId) return;
       const unsub = onSnapshot(
-        query(collection(db, 'users'), where('institutionId', '==', institutionId), where('role', '==', 'user')),
+        query(collection(db, 'users'), where('institutionId', '==', institutionId)),
         (snap) => {
           setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         },
@@ -7179,7 +7181,6 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
                     const rows: any[] = [];
                     transactions.forEach((tx: any) => {
                       const user = users.find((u: any) => u.uid === tx.userUid || u.qrToken === tx.userToken);
-                      if (!user) return;
                       rows.push({
                         id: tx.id,
                         displayName: user?.displayName || tx.userToken || tx.userEmail || '-',

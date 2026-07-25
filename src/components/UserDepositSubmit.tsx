@@ -88,6 +88,8 @@ const UserDepositSubmit = ({ onClose, currentUserQr, userUid, userData }: { onCl
         const txData: any = {
           partnerUid: partnerDoc?.id || null,
           partnerId: selectedPartnerId,
+          partnerName: partnerDoc?.name || '',
+          institutionId: partnerDoc?.institutionId || null,
           userUid: targetUserUid || null,
           userToken: currentUserQr,
           userEmail: targetUserData?.email || '',
