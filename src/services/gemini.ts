@@ -5,6 +5,7 @@ import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-backend-cpu';
 import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import { logError } from "../lib/errorLogger";
+import { detectWasteWithONNX, isONNXModelAvailable } from "./wasteDetection";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : '') || '';
 
@@ -1520,6 +1521,23 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
     functionName: 'analyzeWaste'
   });
   console.warn('Gemini gagal setelah retry, menggunakan analisis lokal:', geminiError?.message || 'unknown');
+
+  if (isONNXModelAvailable()) {
+    try {
+      const onnxResult = await detectWasteWithONNX(base64Image);
+      if (onnxResult.isWaste && onnxResult.primaryWaste) {
+        const templateKey = onnxResult.primaryWaste.templateKey;
+        const template = TEMPLATES[templateKey] || TEMPLATES.mixed;
+        return normalizeWasteAnalysis({
+          ...template,
+          name: onnxResult.primaryWaste.label,
+          accuracy: onnxResult.primaryWaste.confidence,
+        }, onnxResult.primaryWaste.confidence);
+      }
+    } catch (onnxError: any) {
+      console.warn('ONNX detection failed, falling back to TFJS:', onnxError?.message || 'unknown');
+    }
+  }
 
   const localResult = await analyzeWasteLocally(base64Image, userId);
   return localResult;
