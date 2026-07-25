@@ -109,7 +109,7 @@ type AppState =
   | 'user_dashboard' | 'redemption' | 'education_list' | 'education_detail'
   | 'map' | 'about' | 'scan_options' | 'admin_dashboard' | 'super_admin_dashboard' | 'institution_admin_dashboard' | 'partner_dashboard'
   | 'waste_bank_list' | 'waste_bank_calculate' | 'waste_bank_verify'
-  | 'daily_missions' | 'institution_setup'
+  | 'daily_missions' | 'welcome'
   | 'quiz';
 
 interface NotificationItem {
@@ -7807,7 +7807,7 @@ export default function App() {
             const isReturningUser = !!(updatedData.scanHistory?.length || updatedData.depositHistory?.length || updatedData.claimHistory?.length || updatedData.points > 0 || updatedData.streak > 1);
 
             if (!updatedData.institutionId && !isReturningUser) {
-              setState('institution_setup');
+              setState('welcome');
             } else {
               setState('welcome');
             }
@@ -7828,7 +7828,7 @@ export default function App() {
             };
             await setDoc(userRef, initialData);
             setUserData(initialData);
-            setState('institution_setup');
+            setState('welcome');
             setIsInitializing(false);
           }
         }
@@ -8270,16 +8270,6 @@ export default function App() {
               </div>
             </motion.div>
           </motion.div>
-        )}
-        {state === 'institution_setup' && (
-          <InstitutionSetupScreen
-            onComplete={(institutionId) => {
-              setState('welcome');
-            }}
-            onSkip={() => {
-              setState('welcome');
-            }}
-          />
         )}
         {state === 'welcome' && <WelcomeScreen onStart={() => setState('main')} />}
         {state === 'about' && <AboutScreen onBack={() => setState('main')} />}
