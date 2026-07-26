@@ -15,8 +15,9 @@ export { genAI };
 const DEBUG_WASTE = (import.meta.env && import.meta.env.VITE_WASTE_DEBUG === 'true') || (typeof process !== 'undefined' && process.env.VITE_WASTE_DEBUG === 'true');
 
 export interface WasteAnalysis {
+  isNotWaste?: boolean;
   name: string;
-  category: "Organik" | "Residu" | "Anorganik" | "B3" | "Kertas" | "Plastik" | "Logam" | "Kaca";
+  category: "Organik" | "Residu" | "Anorganik" | "B3" | "Kertas" | "Plastik" | "Logam" | "Kaca" | "Bukan Sampah";
   composition: {
     material: string;
     percentage: number;
@@ -372,8 +373,8 @@ function formatLabel(label: string): string {
 }
 
 function normalizeWasteAnalysis(analysis: WasteAnalysis, confidence: number): WasteAnalysis {
-  const validCategories = ["Organik", "Residu", "Anorganik", "B3", "Kertas", "Plastik", "Logam", "Kaca"] as const;
-  const category = validCategories.includes(analysis.category) ? analysis.category : "Anorganik";
+  const validCategories = ["Organik", "Residu", "Anorganik", "B3", "Kertas", "Plastik", "Logam", "Kaca", "Bukan Sampah"] as const;
+  const category = (validCategories as readonly string[]).includes(analysis.category) ? analysis.category : "Anorganik";
 
   return {
     ...analysis,
@@ -1386,19 +1387,21 @@ CATEGORY DEFINITIONS (VERY IMPORTANT):
 - Anorganik: Mixed materials that don't fit above categories
 
 CRITICAL IDENTIFICATION RULES:
-1. Food waste (sisa makanan) → ALWAYS classify as "Residu" NOT "Organik"
-2. Cooked food appearance (brown, beige, wet) → "Residu"
-3. Food leftovers, bones, meat scraps → "Residu"
-4. Plate/bowl contents from meal → "Residu"
-5. Fresh whole fruits/vegetables → "Organik"
-6. Garden waste (leaves, grass, flowers) → "Organik"
+1. NON-WASTE DETECTION: If the image shows a human face, selfie, person, pet, animal, clean car, furniture, wall, sky, landscape, or anything that is CLEARLY NOT WASTE, set "isNotWaste": true, "category": "Bukan Sampah", and "name": "Bukan Sampah".
+2. Food waste (sisa makanan) → ALWAYS classify as "Residu" NOT "Organik"
+3. Cooked food appearance (brown, beige, wet) → "Residu"
+4. Food leftovers, bones, meat scraps → "Residu"
+5. Plate/bowl contents from meal → "Residu"
+6. Fresh whole fruits/vegetables → "Organik"
+7. Garden waste (leaves, grass, flowers) → "Organik"
 
 Analyze the visible materials carefully and create accurate composition percentages based on visual evidence. Return realistic disposal guide, creative upcycling ideas, tips, environmental impact, and impact stats.
 
 You must return ONLY the result as a JSON object with this exact structure:
 {
-  "name": "string (Specific name of the waste)",
-  "category": "Residu | Organik | Anorganik | B3 | Kertas | Plastik | Logam | Kaca",
+  "isNotWaste": boolean (set true ONLY if the image is NOT waste/recyclable),
+  "name": "string (Specific name of the waste or 'Bukan Sampah')",
+  "category": "Residu | Organik | Anorganik | B3 | Kertas | Plastik | Logam | Kaca | Bukan Sampah",
   "composition": [{"material": "string", "percentage": number, "description": "string"}],
   "disposalGuide": "string",
   "recyclable": boolean,
@@ -1430,7 +1433,11 @@ You must return ONLY the result as a JSON object with this exact structure:
       const result = await model.generateContent(parts);
       const text = result.response.text().trim();
       if (!text) throw new Error("No analysis result received from AI");
-      return normalizeWasteAnalysis(parseWasteAnalysis(text), 0.82);
+      const parsed = parseWasteAnalysis(text);
+      if (parsed.isNotWaste || parsed.category === "Bukan Sampah") {
+        throw new Error("BUKAN_SAMPAH: Objek yang dipindai bukan merupakan sampah. Mohon pindaikan barang bekas atau sampah yang dapat didaur ulang.");
+      }
+      return normalizeWasteAnalysis(parsed, 0.82);
     } catch (e: any) {
       errors.push(`${modelName}: ${e?.message || e}`);
       await logError({
@@ -1473,6 +1480,24 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
     throw validationError;
   }
 
+  // 1. Uji filter lokal dengan ONNX (jika model /models/trash_detector.onnx tersedia)
+  if (isONNXModelAvailable()) {
+    try {
+      const onnxResult = await detectWasteWithONNX(base64Image);
+      if (onnxResult.modelLoaded) {
+        if (!onnxResult.isWaste) {
+          console.warn('ONNX Filter: Objek dipindai bukan sampah');
+          throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
+        }
+      }
+    } catch (onnxError: any) {
+      if (onnxError?.message?.includes('BUKAN_SAMPAH')) {
+        throw onnxError;
+      }
+      console.warn('ONNX filter check skipped:', onnxError?.message || 'unknown');
+    }
+  }
+
   let geminiError: Error | null = null;
 
   // Skip cloud Gemini entirely if no API key is configured (use local on-device analysis)
@@ -1491,6 +1516,12 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
       } catch (error: any) {
         geminiError = error instanceof Error ? error : new Error(String(error));
         console.warn(`Gemini attempt ${attempt + 1} failed:`, geminiError.message);
+
+        // Jika hasil deteksi menyatakan BUKAN_SAMPAH, langsung lempar error tanpa retry
+        if (geminiError.message.includes('BUKAN_SAMPAH')) {
+          throw geminiError;
+        }
+
         await logError({
           severity: 'WARNING',
           type: 'gemini_api_failed',

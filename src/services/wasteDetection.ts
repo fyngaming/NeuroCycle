@@ -10,6 +10,7 @@ export interface WasteDetectionResult {
   isWaste: boolean;
   message: string;
   callback: string;
+  modelLoaded?: boolean;
   detections: WasteDetection[];
   primaryWaste?: {
     label: string;
@@ -203,6 +204,7 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
         isWaste: false,
         message: 'Sampah tidak terdeteksi',
         callback: 'bukan_sampah',
+        modelLoaded: true,
         detections: [],
       };
     }
@@ -214,6 +216,7 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
       isWaste: true,
       message: `Sampah terdeteksi: ${template.label} (${(best.confidence * 100).toFixed(1)}%)`,
       callback: 'sampah_terdeteksi',
+      modelLoaded: true,
       detections: wasteDetections,
       primaryWaste: {
         label: template.label,
@@ -228,6 +231,7 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
       isWaste: false,
       message: 'Model deteksi gagal',
       callback: 'error',
+      modelLoaded: false,
       detections: [],
     };
   }

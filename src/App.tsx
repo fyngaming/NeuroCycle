@@ -8062,6 +8062,13 @@ export default function App() {
     } catch (err: any) {
       console.error("Detail Error Pemindaian:", err);
       const errorMsg = err.message || 'Gagal memproses gambar.';
+
+      if (errorMsg.includes('BUKAN_SAMPAH')) {
+        const cleanMsg = errorMsg.replace('BUKAN_SAMPAH:', '').trim();
+        alert(`🚫 ${cleanMsg}`);
+        setState('main');
+        return;
+      }
       
       // Log error with context
       let errorType = 'scan_analysis_failed';
