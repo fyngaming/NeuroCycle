@@ -1573,7 +1573,8 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
 
   const localResult = await analyzeWasteLocally(base64Image, userId);
   return localResult;
-  } catch {
+  } catch (e: any) {
+    if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
     return normalizeWasteAnalysis(TEMPLATES.mixed, 0.3);
   }
 }
