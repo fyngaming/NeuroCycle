@@ -7977,21 +7977,19 @@ export default function App() {
 
       setProgressMsg('Mendeteksi jenis sampah...');
       let analysis: WasteAnalysis;
-      const onnxAvailable = isONNXModelAvailable();
-      if (onnxAvailable) {
-        try {
-          const onnxResult = await detectWasteWithONNX(compressedBase64);
-          if (onnxResult.modelLoaded && !onnxResult.isWaste) {
-            throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
+const onnxAvailable = isONNXModelAvailable();
+          if (onnxAvailable) {
+            try {
+              const onnxResult = await detectWasteWithONNX(compressedBase64);
+              if (onnxResult.modelLoaded && !onnxResult.isWaste) {
+                throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
+              }
+            } catch (e: any) {
+              if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
+              console.warn('ONNX pre-filter failed, using Gemini only:', e?.message || 'unknown');
+            }
           }
           analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
-        } catch (e) {
-          console.warn('ONNX detection failed, falling back to Gemini:', e);
-          analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
-        }
-      } else {
-        analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
-      }
       setResult(analysis);
 
       // Handle non-waste items - don't award points
