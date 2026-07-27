@@ -20,9 +20,10 @@ export interface WasteDetectionResult {
 }
 
 const MODEL_PATH = '/models/trash_detector.onnx';
-const INPUT_SIZE = 640;
-const CONFIDENCE_THRESHOLD = 0.35;
-const MIN_QUALITY_CONFIDENCE = 0.45;
+// Use 320 instead of 640 to reduce memory usage by 4x (avoid OOM crash)
+const INPUT_SIZE = 320;
+const CONFIDENCE_THRESHOLD = 0.30;
+const MIN_QUALITY_CONFIDENCE = 0.40;
 const MAX_SAME_CLASS_RATIO = 1.5;
 const IOU_THRESHOLD = 0.45;
 const LETTERBOX_VALUE = 128;
@@ -45,26 +46,36 @@ const CLASS_TO_TEMPLATE: Record<string, { templateKey: string; label: string }> 
   'trash': { templateKey: 'residue', label: 'Sampah Residu' },
 };
 
+let session: ort.InferenceSession | null = null;
 let sessionPromise: Promise<ort.InferenceSession> | null = null;
-let sessionLoaded = false;
 let modelLoadError: string | null = null;
-let warmedUp = false;
 
 async function getSession(): Promise<ort.InferenceSession> {
-  if (sessionPromise) {
-    if (sessionLoaded) return sessionPromise;
-    if (modelLoadError) throw new Error(`ONNX model failed: ${modelLoadError}`);
-    return sessionPromise;
-  }
+  // Return cached session immediately if available
+  if (session) return session;
+
+  // If already loading, wait for it
+  if (sessionPromise) return sessionPromise;
+
+  // Configure ONNX runtime for minimal memory usage
+  ort.env.wasm.numThreads = 1;
+  ort.env.wasm.simd = true;
+
   sessionPromise = ort.InferenceSession.create(MODEL_PATH, {
-    executionProviders: ['wasm', 'cpu'],
-  }).then(session => {
-    sessionLoaded = true;
-    return session;
+    executionProviders: ['wasm'],
+    graphOptimizationLevel: 'basic',
+    enableCpuMemArena: false,
+    enableMemPattern: false,
+  }).then(sess => {
+    session = sess;
+    modelLoadError = null;
+    return sess;
   }).catch(err => {
     modelLoadError = err instanceof Error ? err.message : String(err);
+    sessionPromise = null; // allow retry
     throw err;
   });
+
   return sessionPromise;
 }
 
@@ -72,7 +83,7 @@ function preprocessImage(img: HTMLImageElement): Float32Array {
   const canvas = document.createElement('canvas');
   canvas.width = INPUT_SIZE;
   canvas.height = INPUT_SIZE;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 
   const imgW = img.naturalWidth || img.width;
   const imgH = img.naturalHeight || img.height;
@@ -85,16 +96,21 @@ function preprocessImage(img: HTMLImageElement): Float32Array {
   ctx.drawImage(img, dw, dh, imgW * ratio, imgH * ratio);
 
   const imageData = ctx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
+  const pixels = imageData.data;
+  const total = INPUT_SIZE * INPUT_SIZE;
+  const input = new Float32Array(3 * total);
 
-  const input = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE);
-  for (let h = 0; h < INPUT_SIZE; h++) {
-    for (let w = 0; w < INPUT_SIZE; w++) {
-      const idx = (h * INPUT_SIZE + w) * 4;
-      input[h * INPUT_SIZE + w] = imageData.data[idx] / 255.0;
-      input[INPUT_SIZE * INPUT_SIZE + h * INPUT_SIZE + w] = imageData.data[idx + 1] / 255.0;
-      input[2 * INPUT_SIZE * INPUT_SIZE + h * INPUT_SIZE + w] = imageData.data[idx + 2] / 255.0;
-    }
+  for (let i = 0; i < total; i++) {
+    const idx = i * 4;
+    input[i] = pixels[idx] / 255.0;           // R channel
+    input[total + i] = pixels[idx + 1] / 255.0; // G channel
+    input[2 * total + i] = pixels[idx + 2] / 255.0; // B channel
   }
+
+  // Help GC
+  canvas.width = 0;
+  canvas.height = 0;
+
   return input;
 }
 
@@ -112,7 +128,9 @@ function iou(a: number[], b: number[]): number {
   return union > 0 ? inter / union : 0;
 }
 
-function nonMaxSuppression(detections: { box: number[]; score: number; classIdx: number }[]): { box: number[]; score: number; classIdx: number }[] {
+function nonMaxSuppression(
+  detections: { box: number[]; score: number; classIdx: number }[]
+): { box: number[]; score: number; classIdx: number }[] {
   detections.sort((a, b) => b.score - a.score);
 
   const keep: { box: number[]; score: number; classIdx: number }[] = [];
@@ -123,7 +141,10 @@ function nonMaxSuppression(detections: { box: number[]; score: number; classIdx:
     keep.push(detections[i]);
     for (let j = i + 1; j < detections.length; j++) {
       if (suppressed.has(j)) continue;
-      if (detections[i].classIdx === detections[j].classIdx && iou(detections[i].box, detections[j].box) > IOU_THRESHOLD) {
+      if (
+        detections[i].classIdx === detections[j].classIdx &&
+        iou(detections[i].box, detections[j].box) > IOU_THRESHOLD
+      ) {
         suppressed.add(j);
       }
     }
@@ -132,27 +153,27 @@ function nonMaxSuppression(detections: { box: number[]; score: number; classIdx:
   return keep;
 }
 
-function parseYolov8Output(output: ort.Tensor): { box: number[]; score: number; classIdx: number }[] {
+function parseYolov8Output(
+  output: ort.Tensor
+): { box: number[]; score: number; classIdx: number }[] {
   const data = output.data as Float32Array;
   const shape = output.dims;
 
-  const numClasses = shape[1] - 4;
+  // YOLOv8 output shape: [1, num_classes+4, num_detections]
+  // Transpose to iterate per detection
+  const numBoxCoords = 4;
+  const numClasses = shape[1] - numBoxCoords;
   const numDetections = shape[2];
 
   const detections: { box: number[]; score: number; classIdx: number }[] = [];
 
   for (let i = 0; i < numDetections; i++) {
-    const offset = i * shape[1];
-
-    const xCenter = data[offset];
-    const yCenter = data[offset + 1];
-    const width = data[offset + 2];
-    const height = data[offset + 3];
-
     let maxClassScore = 0;
     let classIdx = 0;
+
     for (let c = 0; c < numClasses; c++) {
-      const score = data[offset + 4 + c];
+      // data is in [channel, detection] layout
+      const score = data[(numBoxCoords + c) * numDetections + i];
       if (score > maxClassScore) {
         maxClassScore = score;
         classIdx = c;
@@ -161,45 +182,35 @@ function parseYolov8Output(output: ort.Tensor): { box: number[]; score: number; 
 
     if (maxClassScore < CONFIDENCE_THRESHOLD) continue;
 
+    const xCenter = data[0 * numDetections + i];
+    const yCenter = data[1 * numDetections + i];
+    const width = data[2 * numDetections + i];
+    const height = data[3 * numDetections + i];
+
     const x1 = xCenter - width / 2;
     const y1 = yCenter - height / 2;
     const x2 = xCenter + width / 2;
     const y2 = yCenter + height / 2;
 
-    detections.push({
-      box: [x1, y1, x2, y2],
-      score: maxClassScore,
-      classIdx,
-    });
+    detections.push({ box: [x1, y1, x2, y2], score: maxClassScore, classIdx });
   }
 
   return nonMaxSuppression(detections);
 }
 
 function getClassName(classIdx: number): string {
-  if (classIdx < WASTE_CLASSES.length) {
-    return WASTE_CLASSES[classIdx];
-  }
-  return 'trash';
+  return classIdx < WASTE_CLASSES.length ? WASTE_CLASSES[classIdx] : 'trash';
 }
 
-async function warmupSession(session: ort.InferenceSession): Promise<void> {
-  if (warmedUp) return;
-  try {
-    const dummyInput = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE).fill(0.5);
-    const dummyTensor = new ort.Tensor('float32', dummyInput, [1, 3, INPUT_SIZE, INPUT_SIZE]);
-    await session.run({ images: dummyTensor });
-    warmedUp = true;
-  } catch {
-    warmedUp = true;
-  }
-}
+export async function detectWasteWithONNX(
+  base64Image: string
+): Promise<WasteDetectionResult> {
+  let objectUrl: string | null = null;
 
-export async function detectWasteWithONNX(base64Image: string): Promise<WasteDetectionResult> {
   try {
-    const session = await getSession();
-    await warmupSession(session);
+    const sess = await getSession();
 
+    // Decode base64 to Blob
     const base64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -207,24 +218,26 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
       bytes[i] = binaryString.charCodeAt(i);
     }
     const blob = new Blob([bytes], { type: 'image/jpeg' });
-    const url = URL.createObjectURL(blob);
+    objectUrl = URL.createObjectURL(blob);
 
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = reject;
-      image.src = url;
+      image.src = objectUrl!;
     });
 
-    const inputTensor = new ort.Tensor('float32', preprocessImage(img), [1, 3, INPUT_SIZE, INPUT_SIZE]);
+    const inputData = preprocessImage(img);
+    const inputTensor = new ort.Tensor('float32', inputData, [1, 3, INPUT_SIZE, INPUT_SIZE]);
 
     const feeds = { images: inputTensor };
-    const results = await session.run(feeds);
+    const results = await sess.run(feeds);
 
-    const outputTensor = results['output0'] || results['images'] || Object.values(results)[0];
+    const outputTensor =
+      results['output0'] ||
+      results[Object.keys(results)[0]];
+
     const rawDetections = parseYolov8Output(outputTensor);
-
-    URL.revokeObjectURL(url);
 
     const detections: WasteDetection[] = rawDetections.map(d => ({
       label: getClassName(d.classIdx),
@@ -232,10 +245,9 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
       bbox: { x1: d.box[0], y1: d.box[1], x2: d.box[2], y2: d.box[3] },
     }));
 
-    const wasteDetections = detections.filter(d => {
-      const className = d.label.toLowerCase();
-      return WASTE_CLASSES.includes(className);
-    });
+    const wasteDetections = detections.filter(d =>
+      WASTE_CLASSES.includes(d.label.toLowerCase())
+    );
 
     if (wasteDetections.length === 0) {
       return {
@@ -247,36 +259,24 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
       };
     }
 
-    const best = wasteDetections.sort((a, b) => b.confidence - a.confidence)[0];
+    const sorted = wasteDetections.sort((a, b) => b.confidence - a.confidence);
+    const best = sorted[0];
 
-    const totalConfidence = wasteDetections.reduce((sum, d) => sum + d.confidence, 0);
-    const avgConfidence = totalConfidence / wasteDetections.length;
-    const bestRatio = best.confidence / avgConfidence;
+    const totalConf = wasteDetections.reduce((s, d) => s + d.confidence, 0);
+    const avgConf = totalConf / wasteDetections.length;
+    const bestRatio = best.confidence / avgConf;
 
-    const template = CLASS_TO_TEMPLATE[best.label.toLowerCase()] || { templateKey: 'mixed', label: 'Sampah Campuran' };
+    const template =
+      CLASS_TO_TEMPLATE[best.label.toLowerCase()] ||
+      { templateKey: 'mixed', label: 'Sampah Campuran' };
 
     const isUncertain = bestRatio > MAX_SAME_CLASS_RATIO && wasteDetections.length > 1;
     const isLowQuality = best.confidence < MIN_QUALITY_CONFIDENCE;
 
-    if (isLowQuality || isUncertain) {
-      return {
-        isWaste: true,
-        message: `Sampah terdeteksi: ${template.label} (confidence: ${(best.confidence * 100).toFixed(1)}%)`,
-        callback: isLowQuality ? 'low_confidence' : 'uncertain',
-        modelLoaded: true,
-        detections: wasteDetections,
-        primaryWaste: {
-          label: template.label,
-          templateKey: template.templateKey,
-          confidence: best.confidence,
-        },
-      };
-    }
-
     return {
       isWaste: true,
       message: `Sampah terdeteksi: ${template.label} (${(best.confidence * 100).toFixed(1)}%)`,
-      callback: 'sampah_terdeteksi',
+      callback: isLowQuality || isUncertain ? 'low_confidence' : 'sampah_terdeteksi',
       modelLoaded: true,
       detections: wasteDetections,
       primaryWaste: {
@@ -285,16 +285,18 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
         confidence: best.confidence,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('ONNX waste detection failed:', errorMsg);
     return {
       isWaste: false,
-      message: 'Model deteksi gagal',
+      message: 'Model deteksi gagal dimuat',
       callback: 'error',
       modelLoaded: false,
       detections: [],
     };
+  } finally {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }
 
