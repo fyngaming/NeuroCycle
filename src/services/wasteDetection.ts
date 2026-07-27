@@ -21,7 +21,9 @@ export interface WasteDetectionResult {
 
 const MODEL_PATH = '/models/trash_detector.onnx';
 const INPUT_SIZE = 640;
-const CONFIDENCE_THRESHOLD = 0.45;
+const CONFIDENCE_THRESHOLD = 0.55;
+const MIN_QUALITY_CONFIDENCE = 0.6;
+const MAX_SAME_CLASS_RATIO = 0.7;
 const IOU_THRESHOLD = 0.45;
 
 const WASTE_CLASSES: string[] = [
@@ -210,6 +212,29 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
     }
 
     const best = wasteDetections.sort((a, b) => b.confidence - a.confidence)[0];
+
+    if (best.confidence < MIN_QUALITY_CONFIDENCE) {
+      return {
+        isWaste: false,
+        message: 'Hasil deteksi kurang yakin, silakan coba ulang',
+        callback: 'low_confidence',
+        modelLoaded: true,
+        detections: wasteDetections,
+      };
+    }
+
+    const totalConfidence = wasteDetections.reduce((sum, d) => sum + d.confidence, 0);
+    const bestRatio = best.confidence / (totalConfidence / wasteDetections.length);
+    if (bestRatio > 3 && wasteDetections.length > 1) {
+      return {
+        isWaste: false,
+        message: 'Model belum yakin dengan jenis sampah ini',
+        callback: 'uncertain',
+        modelLoaded: true,
+        detections: wasteDetections,
+      };
+    }
+
     const template = CLASS_TO_TEMPLATE[best.label.toLowerCase()] || { templateKey: 'mixed', label: 'Sampah Campuran' };
 
     return {
