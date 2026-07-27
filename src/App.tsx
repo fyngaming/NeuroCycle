@@ -8011,6 +8011,13 @@ export default function App() {
       }
       setResult(analysis);
 
+      // Handle non-waste items - don't award points
+      if (analysis.isNotWaste || analysis.category === 'Bukan Sampah') {
+        alert(`ðŸŸŔ Item ini bukan sampah: ${analysis.name}. Tidak mendapatkan poin.`);
+        setState('main');
+        return;
+      }
+
       // Award points & update history
       const newPoints = userData.points + 25;
       const newScans = userData.scans + 1;
