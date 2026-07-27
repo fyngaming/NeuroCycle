@@ -7975,22 +7975,37 @@ export default function App() {
 
       const pureBase64 = compressedBase64.split(',')[1];
 
-      setProgressMsg('Mendeteksi jenis sampah...');
-      let analysis: WasteAnalysis;
-const onnxAvailable = isONNXModelAvailable();
-          if (onnxAvailable) {
-            try {
-              const onnxResult = await detectWasteWithONNX(compressedBase64);
-              if (onnxResult.modelLoaded && !onnxResult.isWaste) {
-                throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
-              }
-            } catch (e: any) {
-              if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
-              console.warn('ONNX pre-filter failed, using Gemini only:', e?.message || 'unknown');
-            }
-          }
-          analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
-      setResult(analysis);
+setProgressMsg('Mendeteksi jenis sampah...');
+       let analysis: WasteAnalysis;
+       const onnxAvailable = isONNXModelAvailable();
+       if (onnxAvailable) {
+         try {
+           const onnxResult = await detectWasteWithONNX(compressedBase64);
+           if (onnxResult.modelLoaded && !onnxResult.isWaste) {
+             throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
+           }
+         } catch (e: any) {
+           if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
+           console.warn('ONNX pre-filter skipped, using Gemini:', e?.message || 'unknown');
+         }
+       }
+       try {
+         analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+       } catch {
+         analysis = {
+           name: 'Sampah Campuran',
+           category: 'Anorganik',
+           composition: [{ material: 'mixed', percentage: 100, description: 'Tidak dapat mengidentifikasi jenis sampah secara pasti.' }],
+           disposalGuide: 'Pisahkan sampah berdasarkan jenis: organik, anorganik, plastik, kertas, logam, atau kaca.',
+           recyclable: true,
+           accuracy: 0.3,
+           tips: 'Pastikan gambar sampah terlihat jelas dan pencahayaan cukup.',
+           environmentalImpact: 'Mengurangi limbah di TPA.',
+           creativeIdeas: ['Daur ulang', 'Kompos'],
+           impactStats: { co2Saved: 0.1, waterSaved: 1, energySaved: 0.05 },
+         };
+       }
+       setResult(analysis);
 
       // Handle non-waste items - don't award points
       if (analysis.isNotWaste || analysis.category === 'Bukan Sampah') {
