@@ -1466,6 +1466,7 @@ You must return ONLY the result as a JSON object with this exact structure:
 }
 
 export async function analyzeWaste(base64Image: string, userId?: string): Promise<WasteAnalysis> {
+  try {
   if (!base64Image || base64Image.length < 100) {
     const validationError = new Error('Gambar tidak valid atau terlalu kecil untuk dianalisis.');
     await logError({
@@ -1572,4 +1573,7 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
 
   const localResult = await analyzeWasteLocally(base64Image, userId);
   return localResult;
+  } catch {
+    return normalizeWasteAnalysis(TEMPLATES.mixed, 0.3);
+  }
 }
