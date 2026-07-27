@@ -1481,23 +1481,8 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
     throw validationError;
   }
 
-  // 1. Uji filter lokal dengan ONNX (jika model /models/trash_detector.onnx tersedia)
-  if (isONNXModelAvailable()) {
-    try {
-      const onnxResult = await detectWasteWithONNX(base64Image);
-      if (onnxResult.modelLoaded) {
-        if (!onnxResult.isWaste) {
-          console.warn('ONNX Filter: Objek dipindai bukan sampah');
-          throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
-        }
-      }
-    } catch (onnxError: any) {
-      if (onnxError?.message?.includes('BUKAN_SAMPAH')) {
-        throw onnxError;
-      }
-      console.warn('ONNX filter check skipped:', onnxError?.message || 'unknown');
-    }
-  }
+  // ONNX local filter disabled: model too large (11.7MB) for browser WebAssembly memory
+  // Detection handled entirely by Gemini AI to prevent Out of Memory crashes
 
   let geminiError: Error | null = null;
 
@@ -1554,22 +1539,7 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
   });
   console.warn('Gemini gagal setelah retry, menggunakan analisis lokal:', geminiError?.message || 'unknown');
 
-  if (isONNXModelAvailable()) {
-    try {
-      const onnxResult = await detectWasteWithONNX(base64Image);
-      if (onnxResult.isWaste && onnxResult.primaryWaste) {
-        const templateKey = onnxResult.primaryWaste.templateKey;
-        const template = TEMPLATES[templateKey] || TEMPLATES.mixed;
-        return normalizeWasteAnalysis({
-          ...template,
-          name: onnxResult.primaryWaste.label,
-          accuracy: onnxResult.primaryWaste.confidence,
-        }, onnxResult.primaryWaste.confidence);
-      }
-    } catch (onnxError: any) {
-      console.warn('ONNX detection failed, falling back to TFJS:', onnxError?.message || 'unknown');
-    }
-  }
+  // ONNX fallback disabled: use local Gemini-free analysis instead
 
   const localResult = await analyzeWasteLocally(base64Image, userId);
   return localResult;
