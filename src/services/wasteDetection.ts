@@ -21,10 +21,11 @@ export interface WasteDetectionResult {
 
 const MODEL_PATH = '/models/trash_detector.onnx';
 const INPUT_SIZE = 640;
-const CONFIDENCE_THRESHOLD = 0.55;
-const MIN_QUALITY_CONFIDENCE = 0.6;
-const MAX_SAME_CLASS_RATIO = 0.7;
+const CONFIDENCE_THRESHOLD = 0.35;
+const MIN_QUALITY_CONFIDENCE = 0.45;
+const MAX_SAME_CLASS_RATIO = 1.5;
 const IOU_THRESHOLD = 0.45;
+const LETTERBOX_VALUE = 128;
 
 const WASTE_CLASSES: string[] = [
   'plastic',
@@ -45,13 +46,25 @@ const CLASS_TO_TEMPLATE: Record<string, { templateKey: string; label: string }> 
 };
 
 let sessionPromise: Promise<ort.InferenceSession> | null = null;
+let sessionLoaded = false;
+let modelLoadError: string | null = null;
+let warmedUp = false;
 
 async function getSession(): Promise<ort.InferenceSession> {
-  if (!sessionPromise) {
-    sessionPromise = ort.InferenceSession.create(MODEL_PATH, {
-      executionProviders: ['wasm', 'cpu'],
-    });
+  if (sessionPromise) {
+    if (sessionLoaded) return sessionPromise;
+    if (modelLoadError) throw new Error(`ONNX model failed: ${modelLoadError}`);
+    return sessionPromise;
   }
+  sessionPromise = ort.InferenceSession.create(MODEL_PATH, {
+    executionProviders: ['wasm', 'cpu'],
+  }).then(session => {
+    sessionLoaded = true;
+    return session;
+  }).catch(err => {
+    modelLoadError = err instanceof Error ? err.message : String(err);
+    throw err;
+  });
   return sessionPromise;
 }
 
@@ -60,7 +73,17 @@ function preprocessImage(img: HTMLImageElement): Float32Array {
   canvas.width = INPUT_SIZE;
   canvas.height = INPUT_SIZE;
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0, INPUT_SIZE, INPUT_SIZE);
+
+  const imgW = img.naturalWidth || img.width;
+  const imgH = img.naturalHeight || img.height;
+  const ratio = Math.min(INPUT_SIZE / imgW, INPUT_SIZE / imgH);
+  const dw = (INPUT_SIZE - imgW * ratio) / 2;
+  const dh = (INPUT_SIZE - imgH * ratio) / 2;
+
+  ctx.fillStyle = `rgb(${LETTERBOX_VALUE},${LETTERBOX_VALUE},${LETTERBOX_VALUE})`;
+  ctx.fillRect(0, 0, INPUT_SIZE, INPUT_SIZE);
+  ctx.drawImage(img, dw, dh, imgW * ratio, imgH * ratio);
+
   const imageData = ctx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
 
   const input = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE);
@@ -112,7 +135,7 @@ function nonMaxSuppression(detections: { box: number[]; score: number; classIdx:
 function parseYolov8Output(output: ort.Tensor): { box: number[]; score: number; classIdx: number }[] {
   const data = output.data as Float32Array;
   const shape = output.dims;
-  
+
   const numClasses = shape[1] - 4;
   const numDetections = shape[2];
 
@@ -120,7 +143,7 @@ function parseYolov8Output(output: ort.Tensor): { box: number[]; score: number; 
 
   for (let i = 0; i < numDetections; i++) {
     const offset = i * shape[1];
-    
+
     const xCenter = data[offset];
     const yCenter = data[offset + 1];
     const width = data[offset + 2];
@@ -160,9 +183,22 @@ function getClassName(classIdx: number): string {
   return 'trash';
 }
 
+async function warmupSession(session: ort.InferenceSession): Promise<void> {
+  if (warmedUp) return;
+  try {
+    const dummyInput = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE).fill(0.5);
+    const dummyTensor = new ort.Tensor('float32', dummyInput, [1, 3, INPUT_SIZE, INPUT_SIZE]);
+    await session.run({ images: dummyTensor });
+    warmedUp = true;
+  } catch {
+    warmedUp = true;
+  }
+}
+
 export async function detectWasteWithONNX(base64Image: string): Promise<WasteDetectionResult> {
   try {
     const session = await getSession();
+    await warmupSession(session);
 
     const base64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
     const binaryString = atob(base64);
@@ -213,29 +249,29 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
 
     const best = wasteDetections.sort((a, b) => b.confidence - a.confidence)[0];
 
-    if (best.confidence < MIN_QUALITY_CONFIDENCE) {
-      return {
-        isWaste: false,
-        message: 'Hasil deteksi kurang yakin, silakan coba ulang',
-        callback: 'low_confidence',
-        modelLoaded: true,
-        detections: wasteDetections,
-      };
-    }
-
     const totalConfidence = wasteDetections.reduce((sum, d) => sum + d.confidence, 0);
-    const bestRatio = best.confidence / (totalConfidence / wasteDetections.length);
-    if (bestRatio > 3 && wasteDetections.length > 1) {
-      return {
-        isWaste: false,
-        message: 'Model belum yakin dengan jenis sampah ini',
-        callback: 'uncertain',
-        modelLoaded: true,
-        detections: wasteDetections,
-      };
-    }
+    const avgConfidence = totalConfidence / wasteDetections.length;
+    const bestRatio = best.confidence / avgConfidence;
 
     const template = CLASS_TO_TEMPLATE[best.label.toLowerCase()] || { templateKey: 'mixed', label: 'Sampah Campuran' };
+
+    const isUncertain = bestRatio > MAX_SAME_CLASS_RATIO && wasteDetections.length > 1;
+    const isLowQuality = best.confidence < MIN_QUALITY_CONFIDENCE;
+
+    if (isLowQuality || isUncertain) {
+      return {
+        isWaste: true,
+        message: `Sampah terdeteksi: ${template.label} (confidence: ${(best.confidence * 100).toFixed(1)}%)`,
+        callback: isLowQuality ? 'low_confidence' : 'uncertain',
+        modelLoaded: true,
+        detections: wasteDetections,
+        primaryWaste: {
+          label: template.label,
+          templateKey: template.templateKey,
+          confidence: best.confidence,
+        },
+      };
+    }
 
     return {
       isWaste: true,
@@ -263,5 +299,5 @@ export async function detectWasteWithONNX(base64Image: string): Promise<WasteDet
 }
 
 export function isONNXModelAvailable(): boolean {
-  return true;
+  return modelLoadError === null;
 }

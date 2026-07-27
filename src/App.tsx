@@ -7981,7 +7981,8 @@ export default function App() {
       if (onnxAvailable) {
         try {
           const onnxResult = await detectWasteWithONNX(compressedBase64);
-          if (onnxResult.isWaste && onnxResult.primaryWaste) {
+          const HIGH_TRUST = 0.85;
+          if (onnxResult.isWaste && onnxResult.primaryWaste && onnxResult.primaryWaste.confidence >= HIGH_TRUST) {
             const templateKey = onnxResult.primaryWaste.templateKey;
             const categoryMap: Record<string, WasteAnalysis['category']> = {
               plastic: 'Plastik', glass: 'Kaca', paper: 'Kertas', cardboard: 'Kertas', metal: 'Logam', residue: 'Residu'
