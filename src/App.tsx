@@ -7981,28 +7981,10 @@ export default function App() {
       if (onnxAvailable) {
         try {
           const onnxResult = await detectWasteWithONNX(compressedBase64);
-          const HIGH_TRUST = 0.85;
-          if (onnxResult.isWaste && onnxResult.primaryWaste && onnxResult.primaryWaste.confidence >= HIGH_TRUST) {
-            const templateKey = onnxResult.primaryWaste.templateKey;
-            const categoryMap: Record<string, WasteAnalysis['category']> = {
-              plastic: 'Plastik', glass: 'Kaca', paper: 'Kertas', cardboard: 'Kertas', metal: 'Logam', residue: 'Residu'
-            };
-            const name = onnxResult.primaryWaste.label;
-            analysis = {
-              name,
-              category: categoryMap[templateKey] || 'Residu',
-              composition: [{ material: templateKey, percentage: 100, description: `Terdeteksi ${name} dengan confidence ${(onnxResult.primaryWaste.confidence * 100).toFixed(1)}%` }],
-              disposalGuide: 'Pilih jenis sampah sesuai kategori',
-              recyclable: true,
-              accuracy: onnxResult.primaryWaste.confidence,
-              tips: 'Sampah organik bisa dijadikan kompos.',
-              environmentalImpact: 'Mengurangi limbah di TPA',
-              creativeIdeas: ['Daur ulang', 'Kompos'],
-              impactStats: { co2Saved: 0.5, waterSaved: 10, energySaved: 0.2 },
-            };
-          } else {
-            analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+          if (onnxResult.modelLoaded && !onnxResult.isWaste) {
+            throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
           }
+          analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
         } catch (e) {
           console.warn('ONNX detection failed, falling back to Gemini:', e);
           analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
