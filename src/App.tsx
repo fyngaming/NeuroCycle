@@ -87,6 +87,7 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import { analyzeWaste, WasteAnalysis, genAI } from './services/gemini';
+import { detectWasteWithONNX, isONNXModelAvailable } from './services/wasteDetection';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logError } from './lib/errorLogger';
 import { EDUCATIONAL_ARTICLES } from './constants';
@@ -7974,8 +7975,40 @@ export default function App() {
 
       const pureBase64 = compressedBase64.split(',')[1];
 
-      setProgressMsg('Menganalisis komposisi & dampak...');
-      const analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+      setProgressMsg('Mendeteksi jenis sampah...');
+      let analysis: WasteAnalysis;
+      const onnxAvailable = isONNXModelAvailable();
+      if (onnxAvailable) {
+        try {
+          const onnxResult = await detectWasteWithONNX(compressedBase64);
+          if (onnxResult.isWaste && onnxResult.primaryWaste) {
+            const templateKey = onnxResult.primaryWaste.templateKey;
+            const categoryMap: Record<string, WasteAnalysis['category']> = {
+              plastic: 'Plastik', glass: 'Kaca', paper: 'Kertas', cardboard: 'Kertas', metal: 'Logam', residue: 'Residu'
+            };
+            const name = onnxResult.primaryWaste.label;
+            analysis = {
+              name,
+              category: categoryMap[templateKey] || 'Residu',
+              composition: [{ material: templateKey, percentage: 100, description: `Terdeteksi ${name} dengan confidence ${(onnxResult.primaryWaste.confidence * 100).toFixed(1)}%` }],
+              disposalGuide: 'Pilih jenis sampah sesuai kategori',
+              recyclable: true,
+              accuracy: onnxResult.primaryWaste.confidence,
+              tips: 'Sampah organik bisa dijadikan kompos.',
+              environmentalImpact: 'Mengurangi limbah di TPA',
+              creativeIdeas: ['Daur ulang', 'Kompos'],
+              impactStats: { co2Saved: 0.5, waterSaved: 10, energySaved: 0.2 },
+            };
+          } else {
+            analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+          }
+        } catch (e) {
+          console.warn('ONNX detection failed, falling back to Gemini:', e);
+          analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+        }
+      } else {
+        analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+      }
       setResult(analysis);
 
       // Award points & update history
