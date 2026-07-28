@@ -2957,6 +2957,15 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
       updatedData.notifications = newNotifications;
 
+      const seen = new Set<string>();
+      const deduped = newNotifications.filter(n => {
+        const key = `${n.title}|${n.message}|${n.type}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      updatedData.notifications = deduped;
+
       await updateDoc(userRef, updatedData);
 
       // Update local state (Admin side)
