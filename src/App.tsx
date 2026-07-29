@@ -5465,16 +5465,16 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             >
               <h3 className="text-lg font-display font-black text-stone-900 mb-4">Assign Institusi ke Partner</h3>
               <div className="space-y-3">
-                <select
-                  value={selectedInstId}
-                  onChange={(e) => setSelectedInstId(e.target.value)}
-                  className="w-full p-4 border border-stone-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="">-- Pilih Institusi --</option>
-                  {institutions.map((inst: any) => (
-                    <option key={inst.id} value={inst.id}>{inst.name} ({inst.code || '-'})</option>
-                  ))}
-                </select>
+<select
+                   value={selectedInstId}
+                   onChange={(e) => setSelectedInstId(e.target.value)}
+                   className="w-full p-4 border border-stone-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                 >
+                   <option value="">-- Pilih Institusi --</option>
+                   {institutions.filter((inst: any) => inst.status === 'active').map((inst: any) => (
+                     <option key={inst.id} value={inst.id}>{inst.name} ({inst.code || '-'})</option>
+                   ))}
+                 </select>
                 <div className="flex gap-3">
                   <button
                     onClick={confirmAssignInstitution}
@@ -6237,10 +6237,10 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   onChange={(e) => setReassignInstitutionId(e.target.value)}
                   className="w-full bg-stone-50 px-5 py-4 rounded-2xl border border-stone-200 outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">-- Pilih Institusi --</option>
-                  {institutions.map((inst: any) => (
-                    <option key={inst.id} value={inst.id}>{inst.name} ({inst.code || '-'})</option>
-                  ))}
+<option value="">-- Pilih Institusi --</option>
+                   {institutions.filter((inst: any) => inst.status === 'active').map((inst: any) => (
+                     <option key={inst.id} value={inst.id}>{inst.name} ({inst.code || '-'})</option>
+                   ))}
                 </select>
                 <div className="flex gap-3 mt-6">
                   <button
