@@ -5980,6 +5980,17 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     }
   };
 
+  const handleToggleInstitutionStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    try {
+      await updateDoc(doc(db, 'institutions', id), { status: newStatus });
+      alert(`Institusi berhasil diubah menjadi ${newStatus === 'active' ? 'aktif' : 'nonaktif'}.`);
+    } catch (e) {
+      console.error('Gagal mengubah status institusi:', e);
+      alert('Gagal mengubah status institusi');
+    }
+  };
+
   const openEditForm = (inst: any) => {
     setEditingInstitution(inst);
     setInstitutionForm({
@@ -6267,9 +6278,10 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <tr>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Nama</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Kode</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Dibuat Oleh</th>
+                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-center">Total Partner</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal</th>
+                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-50">
@@ -6277,14 +6289,24 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                     <tr key={inst.id} className="hover:bg-stone-50/50">
                       <td className="px-6 py-4 text-sm font-bold text-stone-800">{inst.name}</td>
                       <td className="px-6 py-4 text-xs font-mono font-bold text-blue-600">{inst.code || '-'}</td>
-                      <td className="px-6 py-4 text-[10px] font-mono text-stone-400">{inst.adminUid || '-'}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${inst.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-red-100 text-red-700 border-red-200'}`}>{inst.status === 'active' ? 'Aktif' : 'Nonaktif'}</span>
+                      </td>
                       <td className="px-6 py-4 text-center text-xs font-black text-stone-800">{partners.filter((p: any) => p.institutionId === inst.id).length}</td>
                       <td className="px-6 py-4 text-xs text-stone-400">{inst.createdAt ? new Date(inst.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleToggleInstitutionStatus(inst.id, inst.status || 'active')}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${inst.status === 'active' ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}
+                        >
+                          {inst.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {institutions.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-stone-400 text-sm">
+                      <td colSpan={5} className="px-6 py-12 text-center text-stone-400 text-sm">
                         Belum ada institusi. Klik "Tambah Institusi" untuk membuat.
                       </td>
                     </tr>
