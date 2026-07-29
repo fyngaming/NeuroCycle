@@ -6592,14 +6592,15 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
   const [partners, setPartners] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
-   const [errorLogs, setErrorLogs] = useState<any[]>([]);
-   const [loading, setLoading] = useState(true);
-   const [institutionId, setInstitutionId] = useState<string>('');
-   const [institutionNotFound, setInstitutionNotFound] = useState(false);
-   const [showAddPartnerForm, setShowAddPartnerForm] = useState(false);
-   const [newPartner, setNewPartner] = useState({ name: '', email: '', phone: '', address: '', notes: '' });
-   const [assigningUser, setAssigningUser] = useState<string | null>(null);
-   const [selectedPartnerId, setSelectedPartnerId] = useState('');
+    const [errorLogs, setErrorLogs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [institutionId, setInstitutionId] = useState<string>('');
+    const [institutionNotFound, setInstitutionNotFound] = useState(false);
+    const [showAddPartnerForm, setShowAddPartnerForm] = useState(false);
+    const [newPartner, setNewPartner] = useState({ name: '', email: '', phone: '', address: '', notes: '' });
+    const [assigningUser, setAssigningUser] = useState<string | null>(null);
+    const [selectedPartnerId, setSelectedPartnerId] = useState('');
+    const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<{ image: string; user: string; title: string; date?: string } | null>(null);
 
    useEffect(() => {
      const fetchInstitution = async () => {
@@ -7187,14 +7188,21 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
                       <td className="px-6 py-4 text-xs text-stone-500 capitalize">{row.category}</td>
                       <td className="px-6 py-4 text-xs text-stone-500">{row.weight} kg</td>
                       <td className="px-6 py-4 text-xs font-black text-emerald-600">{row.points}</td>
-                      <td className="px-6 py-4">
-                        {row.photoUrl ? (
-                          <button // @ts-ignore
-                            onClick={() => setSelectedPhotoPreview({ image: row.photoUrl, user: row.displayName, title: `Bukti Transaksi ${row.id}`, date: row.date })} className="text-blue-600 hover:text-blue-800 font-bold text-xs underline">Lihat</button>
-                        ) : (
-                          <span className="text-stone-400 text-xs italic">Tanpa foto</span>
-                        )}
-                      </td>
+<td className="px-6 py-4">
+                         {row.photoUrl ? (
+                           <button
+                             onClick={() => setSelectedPhotoPreview({ image: row.photoUrl, user: row.displayName, title: `Bukti Transaksi ${row.id}`, date: row.date })}
+                             className="inline-block relative group"
+                           >
+                             <img src={normalizePhotoUrl(row.photoUrl)} alt="Bukti" className="w-10 h-10 object-cover rounded-lg border border-stone-200 hover:border-blue-400 transition-all" />
+                             <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-widest text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">Lihat</span>
+                           </button>
+                         ) : (
+                           <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center border border-stone-200">
+                             <span className="text-stone-300 text-[10px] font-black uppercase">No</span>
+                           </div>
+                         )}
+                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
                           row.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
@@ -7353,13 +7361,44 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
               </table>
             </div>
           </div>
-        )}
-      </div>
-    </div>
-  );
-};
+)}
+       </div>
+       {/* Modal Preview Foto */}
+       <AnimatePresence>
+         {selectedPhotoPreview && (
+           <div className="fixed inset-0 z-[999] flex items-center justify-center p-6">
+             <motion.div
+               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+               onClick={() => setSelectedPhotoPreview(null)}
+               className="absolute inset-0 bg-stone-900/90 backdrop-blur-md"
+             />
+             <motion.div
+               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+               className="relative bg-white rounded-[40px] p-8 w-full max-w-2xl shadow-2xl"
+               onClick={(e) => e.stopPropagation()}
+             >
+               <div className="flex items-center justify-between mb-4">
+                 <div>
+                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">📸 Preview Bukti Foto</p>
+                   <h3 className="font-bold text-stone-800">{selectedPhotoPreview.user}</h3>
+                   <p className="text-xs text-stone-400">{selectedPhotoPreview.title}{selectedPhotoPreview.date ? ` · ${selectedPhotoPreview.date}` : ''}</p>
+                 </div>
+                 <button onClick={() => setSelectedPhotoPreview(null)} className="p-2 bg-stone-100 rounded-xl text-stone-500 hover:bg-stone-200 transition-colors">
+                   <X size={18} />
+                 </button>
+               </div>
+               <div className="rounded-[28px] overflow-hidden border border-stone-100 bg-stone-50">
+                 <img src={normalizePhotoUrl(selectedPhotoPreview.image)} alt="Preview Bukti" className="w-full max-h-[65vh] object-contain" />
+               </div>
+             </motion.div>
+           </div>
+         )}
+       </AnimatePresence>
+     </div>
+   );
+ };
 
-export default function App() {
+ export default function App() {
 
   const [state, setState] = useState<AppState>('login');
   const stateRef = useRef<AppState>('login');
