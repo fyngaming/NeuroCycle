@@ -53,7 +53,6 @@ import {
   Filter,
   Building2,
   Search,
-  Users,
   Copy,
   Lock,
 } from 'lucide-react';
@@ -3674,7 +3673,6 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Dibuat Oleh</th>
                       <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest text-center">Total Partner</th>
                       <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Tanggal</th>
-                      <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-50">
@@ -3707,20 +3705,8 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         <td className="px-8 py-6">
                           <p className="text-sm text-stone-500">{inst.createdAt ? new Date(inst.createdAt).toLocaleDateString('id-ID') : '-'}</p>
                         </td>
-                        <td className="px-8 py-6 text-right">
-                          <button
-                            onClick={() => {
-                              const userList = users.filter(u => u.institutionId === inst.id);
-                              alert(`Total user di institusi ini: ${userList.length}\n\n` + userList.map(u => `• ${u.displayName || u.email}`).join('\n') || 'Tidak ada user.');
-                            }}
-                            className="p-3 bg-stone-100 text-stone-600 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-sm"
-                            title="Lihat User"
-                          >
-                            <Users size={18} />
-                          </button>
-                          </td>
-                        </tr>
-                      ))}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
