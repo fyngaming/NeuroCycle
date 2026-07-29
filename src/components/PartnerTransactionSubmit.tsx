@@ -167,24 +167,14 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
       ));
 
       let txId: string;
-      let isUpdate = false;
 
       if (!existingTxSnap.empty) {
         txId = existingTxSnap.docs[0].id;
-        isUpdate = true;
-        const existing = existingTxSnap.docs[0].data();
-        const mergedItems = [...(existing.items || []), ...finalItems];
-        const mergedWeight = (existing.totalWeight || existing.weight || 0) + finalTotalWeight;
-        const mergedPoints = (existing.totalPoints || 0) + finalTotalPoints;
         await updateDoc(doc(db, 'transactions', txId), {
-          items: mergedItems,
-          totalWeight: mergedWeight,
-          totalPoints: mergedPoints,
-          weight: mergedWeight,
-          photoUrl: photoUrl || existing.photoUrl,
+          status: txStatus,
           updatedAt: new Date().toISOString(),
-          institutionId: partnerInstitutionId || existing.institutionId || null,
-          partnerId: partnerUid || existing.partnerId || null,
+          institutionId: partnerInstitutionId || null,
+          partnerId: partnerUid || null,
         });
       } else {
         txId = doc(collection(db, 'transactions')).id;
@@ -192,7 +182,7 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
         await setDoc(txDocRef, {
           partnerUid: partnerUid || 'unverified',
           partnerId: partnerUid || null,
-          partnerName: partnerName || (isUnapproved ? 'Bank Sampah Belum Terdaftar' : 'Bank Sampah'),
+partnerName: partnerName || (isUnapproved ? 'Bank Sampah Belum Terdaftar' : 'Bank Sampah'),
           userUid: resolvedUser.uid, userToken: trimmedToken,
           category: category, weight: finalTotalWeight, items: finalItems,
           totalWeight: finalTotalWeight, totalPoints: finalTotalPoints, photoUrl,
@@ -207,11 +197,9 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
 
       setSuccessInfo({
         title: isUnapproved ? 'Menunggu Review Admin' : 'Setoran Dicatat',
-        message: isUpdate
-          ? `Setoran digabung ke transaksi yang sudah ada. Total: ${finalTotalWeight} kg • ${finalTotalPoints.toLocaleString()} NP.`
-          : isUnapproved 
-            ? 'Bank sampah belum terdaftar. Setoran menunggu verifikasi admin.'
-            : `Setoran berhasil diajukan. Total: ${finalTotalWeight} kg • ${finalTotalPoints.toLocaleString()} NP.`,
+        message: isUnapproved
+          ? 'Bank sampah belum terdaftar. Setoran menunggu verifikasi admin.'
+          : `Setoran berhasil diajukan. Total: ${finalTotalWeight} kg • ${finalTotalPoints.toLocaleString()} NP.`,
         bankName: partnerName || 'Bank Sampah',
         items: finalItems, totalWeight: finalTotalWeight, totalPoints: finalTotalPoints
       });

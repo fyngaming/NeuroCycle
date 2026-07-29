@@ -643,26 +643,35 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
                     );
                   })}
 
-                  {/* Online transactions */}
-                  {txs.map(tx => {
-                    const isFlagged = tx.status === 'flagged' || tx.status === 'flagged_offline';
-                    const isApproved = tx.status === 'approved';
-                    const isRejected = tx.status === 'rejected';
-                    const canConfirm = tx.status === 'pending' || isFlagged;
+{/* Online transactions */}
+                   {txs.map(tx => {
+                     const isFlagged = tx.status === 'flagged' || tx.status === 'flagged_offline';
+                     const isApproved = tx.status === 'approved';
+                     const isRejected = tx.status === 'rejected';
+                     const canConfirm = tx.status === 'pending' || isFlagged;
 
-                    return (
-                      <div key={tx.id} className="p-4 border border-stone-100 hover:border-stone-200 transition-colors bg-white rounded-3xl flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                            isApproved ? 'bg-emerald-50 text-emerald-600' :
-                            isFlagged ? 'bg-red-50 text-red-600' :
-                            'bg-stone-50 text-stone-600'
-                          }`}>
-                            {isApproved ? <Award size={18} /> : isFlagged ? <ShieldAlert size={18} /> : <Clock size={18} />}
-                          </div>
-                          <div>
-                            <p className="font-bold text-stone-800 text-sm capitalize">{tx.category} · {tx.weight} kg</p>
-                            {tx.userName && <p className="text-[9px] text-stone-400 mt-0.5">User: {tx.userName}</p>}
+                     return (
+                       <div key={tx.id} className="p-4 border border-stone-100 hover:border-stone-200 transition-colors bg-white rounded-3xl flex justify-between items-center">
+                         <div className="flex items-center gap-4">
+                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                             isApproved ? 'bg-emerald-50 text-emerald-600' :
+                             isFlagged ? 'bg-red-50 text-red-600' :
+                             'bg-stone-50 text-stone-600'
+                           }`}>
+                             {isApproved ? <Award size={18} /> : isFlagged ? <ShieldAlert size={18} /> : <Clock size={18} />}
+                           </div>
+                           <div>
+                             {tx.items && tx.items.length > 1 ? (
+                               <div>
+                                 <p className="font-bold text-stone-800 text-sm capitalize">{tx.category || 'Campuran'}</p>
+                                 <p className="text-[10px] text-stone-400 mt-0.5">
+                                   {tx.items.map((i: any) => `${i.category || i.name}: ${i.weight}kg`).join(' · ')}
+                                 </p>
+                               </div>
+                             ) : (
+                               <p className="font-bold text-stone-800 text-sm capitalize">{tx.category} · {tx.weight} kg</p>
+                             )}
+                             {tx.userName && <p className="text-[9px] text-stone-400 mt-0.5">User: {tx.userName}</p>}
                             <span className={`inline-block px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border mt-1 ${
                               isApproved ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                               isFlagged ? 'bg-red-50 text-red-700 border-red-100' :
