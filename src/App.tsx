@@ -6250,7 +6250,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           </div>
         )}
 
-        {activeTab === 'institutions' && (
+{activeTab === 'institutions' && (
           <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden">
             <div className="p-6 border-b border-stone-100 flex items-center justify-between">
               <h3 className="text-lg font-display font-black">Daftar Institusi</h3>
@@ -6267,32 +6267,24 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <tr>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Nama</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Kode</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tipe</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Email</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
-<th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Admin UID</th>
-                   </tr>
+                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Dibuat Oleh</th>
+                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-center">Total Partner</th>
+                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-50">
                   {institutions.map((inst: any) => (
                     <tr key={inst.id} className="hover:bg-stone-50/50">
                       <td className="px-6 py-4 text-sm font-bold text-stone-800">{inst.name}</td>
                       <td className="px-6 py-4 text-xs font-mono font-bold text-blue-600">{inst.code || '-'}</td>
-                      <td className="px-6 py-4 text-xs text-stone-500 capitalize">{inst.type}</td>
-                      <td className="px-6 py-4 text-xs text-stone-500">{inst.email || '-'}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
-                          inst.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                          inst.status === 'suspended' ? 'bg-red-100 text-red-700 border-red-200' :
-                          'bg-stone-100 text-stone-700 border-stone-200'
-                        }`}>{inst.status}</span>
-                      </td>
-<td className="px-6 py-4 text-[10px] font-mono text-stone-400">{inst.adminUid || '-'}</td>
-                     </tr>
+                      <td className="px-6 py-4 text-[10px] font-mono text-stone-400">{inst.adminUid || '-'}</td>
+                      <td className="px-6 py-4 text-center text-xs font-black text-stone-800">{partners.filter((p: any) => p.institutionId === inst.id).length}</td>
+                      <td className="px-6 py-4 text-xs text-stone-400">{inst.createdAt ? new Date(inst.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td>
+                    </tr>
                   ))}
                   {institutions.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-stone-400 text-sm">
+                      <td colSpan={4} className="px-6 py-12 text-center text-stone-400 text-sm">
                         Belum ada institusi. Klik "Tambah Institusi" untuk membuat.
                       </td>
                     </tr>
