@@ -6281,7 +6281,6 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-center">Total Partner</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-50">
@@ -6294,14 +6293,6 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       </td>
                       <td className="px-6 py-4 text-center text-xs font-black text-stone-800">{partners.filter((p: any) => p.institutionId === inst.id).length}</td>
                       <td className="px-6 py-4 text-xs text-stone-400">{inst.createdAt ? new Date(inst.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleToggleInstitutionStatus(inst.id, inst.status || 'active')}
-                          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${inst.status === 'active' ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}
-                        >
-                          {inst.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
-                        </button>
-                      </td>
                     </tr>
                   ))}
                   {institutions.length === 0 && (
@@ -6324,7 +6315,6 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             { id: 'users', label: 'Users' },
             { id: 'user_assignments', label: 'Kelola User' },
             { id: 'transactions', label: 'Transactions' },
-            { id: 'error_logs', label: 'Error Logs' },
             { id: 'inst_passwords', label: '🔐 Password Institusi' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
@@ -6978,7 +6968,6 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
             { id: 'pending_partners', label: 'Persetujuan Partner' },
             { id: 'users', label: 'Users' },
             { id: 'transactions', label: 'Transactions' },
-            { id: 'error_logs', label: 'Error Logs' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>

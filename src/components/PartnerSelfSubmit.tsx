@@ -17,7 +17,8 @@ const PartnerSelfSubmit = ({ onClose, onSuccess }: { onClose: () => void, onSucc
   useEffect(() => {
     const fetchInstitutions = async () => {
       try {
-        const snap = await getDocs(collection(db, 'institutions'));
+        const q = query(collection(db, 'institutions'), where('status', '==', 'active'));
+        const snap = await getDocs(q);
         setInstitutions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) {
         console.error('Gagal memuat institusi:', e);
