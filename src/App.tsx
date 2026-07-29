@@ -2753,6 +2753,12 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState('');
 
+  const [expandedInstId, setExpandedInstId] = useState<string | null>(null);
+  const [instDetailTab, setInstDetailTab] = useState<'partners' | 'users' | 'transactions'>('partners');
+  const [instPartners, setInstPartners] = useState<any[]>([]);
+  const [instUsers, setInstUsers] = useState<any[]>([]);
+  const [instTransactions, setInstTransactions] = useState<any[]>([]);
+
   useEffect(() => {
     import('./services/missionService').then(({ getMissions }) => {
       const unsub = getMissions((m: any[]) => setMissions(m));
@@ -2839,6 +2845,21 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!expandedInstId) { setInstPartners([]); setInstUsers([]); setInstTransactions([]); return; }
+    const unsub1 = onSnapshot(query(collection(db, 'partners'), where('institutionId', '==', expandedInstId)), (snap) => {
+      setInstPartners(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    const unsub2 = onSnapshot(query(collection(db, 'users'), where('institutionId', '==', expandedInstId)), (snap) => {
+      setInstUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    const unsub3 = onSnapshot(collection(db, 'transactions'), (snap) => {
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setInstTransactions(all.filter((tx: any) => tx.institutionId === expandedInstId));
+    });
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, [expandedInstId]);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'errorLogs'), (snap) => {
@@ -5854,6 +5875,11 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [selectedUserEmail, setSelectedUserEmail] = useState('');
   const [reassigningUser, setReassigningUser] = useState<any>(null);
   const [reassignInstitutionId, setReassignInstitutionId] = useState('');
+  const [expandedInstId, setExpandedInstId] = useState<string | null>(null);
+  const [instDetailTab, setInstDetailTab] = useState<'partners' | 'users' | 'transactions'>('partners');
+  const [instPartners, setInstPartners] = useState<any[]>([]);
+  const [instUsers, setInstUsers] = useState<any[]>([]);
+  const [instTransactions, setInstTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     const unsub1 = onSnapshot(collection(db, 'institutions'), (snap) => {
@@ -6284,28 +6310,34 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         }`}>{inst.status}</span>
                       </td>
                       <td className="px-6 py-4 text-[10px] font-mono text-stone-400">{inst.adminUid || '-'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openAssignAdminForm(inst)}
-                            className="px-3 py-1.5 bg-purple-50 text-purple-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-purple-200 hover:bg-purple-100"
-                          >
-                            Assign Admin
-                          </button>
-                          <button
-                            onClick={() => openEditForm(inst)}
-                            className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-200 hover:bg-blue-100"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteInstitution(inst.id)}
-                            className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100"
-                          >
-                            Hapus
-                          </button>
-                        </div>
-                      </td>
+<td className="px-6 py-4 text-right">
+                         <div className="flex items-center justify-end gap-2">
+                           <button
+                             onClick={() => openAssignAdminForm(inst)}
+                             className="px-3 py-1.5 bg-purple-50 text-purple-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-purple-200 hover:bg-purple-100"
+                           >
+                             Assign Admin
+                           </button>
+                           <button
+                             onClick={() => openEditForm(inst)}
+                             className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-200 hover:bg-blue-100"
+                           >
+                             Edit
+                           </button>
+                           <button
+                             onClick={() => handleDeleteInstitution(inst.id)}
+                             className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100"
+                           >
+                             Hapus
+                           </button>
+                           <button
+                             onClick={() => setExpandedInstId(expandedInstId === inst.id ? null : inst.id)}
+                             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${expandedInstId === inst.id ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'}`}
+                           >
+                             Kelola
+                           </button>
+                         </div>
+                       </td>
                     </tr>
                   ))}
                   {institutions.length === 0 && (
@@ -6318,6 +6350,108 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {expandedInstId && (
+          <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden mb-6 animate-fade-in">
+            <div className="p-4 border-b border-stone-100 flex items-center justify-between">
+              <h3 className="font-display font-black text-lg text-stone-900">Detail Institusi</h3>
+              <button onClick={() => setExpandedInstId(null)} className="p-2 bg-stone-50 rounded-xl text-stone-400 hover:text-stone-600">✕</button>
+            </div>
+            <div className="flex gap-2 p-4 border-b border-stone-100">
+              {[
+                { id: 'partners', label: 'Partner' },
+                { id: 'users', label: 'User' },
+                { id: 'transactions', label: 'Transaksi' },
+              ].map(tab => (
+                <button key={tab.id} onClick={() => setInstDetailTab(tab.id as any)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${instDetailTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
+                  {tab.label} ({tab.id === 'partners' ? instPartners.length : tab.id === 'users' ? instUsers.length : instTransactions.length})
+                </button>
+              ))}
+            </div>
+            {instDetailTab === 'partners' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-stone-50">
+                    <tr>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Nama</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Email</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Owner UID</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-50">
+                    {instPartners.map((p: any) => (
+                      <tr key={p.id} className="hover:bg-stone-50/50">
+                        <td className="px-6 py-4 text-sm font-bold text-stone-800">{p.name}</td>
+                        <td className="px-6 py-4 text-xs text-stone-500">{p.email}</td>
+                        <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${p.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : p.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'}`}>{p.status}</span></td>
+                        <td className="px-6 py-4 text-[10px] font-mono text-stone-400">{p.ownerUid}</td>
+                      </tr>
+                    ))}
+                    {instPartners.length === 0 && <tr><td colSpan={4} className="px-6 py-12 text-center text-stone-400 text-sm">Belum ada partner untuk institusi ini.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {instDetailTab === 'users' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-stone-50">
+                    <tr>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Nama</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Email</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Role</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Poin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-50">
+                    {instUsers.map((u: any) => (
+                      <tr key={u.id} className="hover:bg-stone-50/50">
+                        <td className="px-6 py-4 text-sm font-bold text-stone-800">{u.displayName || '-'}</td>
+                        <td className="px-6 py-4 text-xs text-stone-500">{u.email}</td>
+                        <td className="px-6 py-4 text-xs text-stone-500">{u.role || 'user'}</td>
+                        <td className="px-6 py-4 text-xs font-black text-emerald-600">{u.points || 0}</td>
+                      </tr>
+                    ))}
+                    {instUsers.length === 0 && <tr><td colSpan={4} className="px-6 py-12 text-center text-stone-400 text-sm">Belum ada user untuk institusi ini.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {instDetailTab === 'transactions' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-stone-50">
+                    <tr>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Partner</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">User</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Kategori</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase"> Berat</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Poin</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-50">
+                    {instTransactions.slice(0, 100).map((tx: any) => (
+                      <tr key={tx.id} className="hover:bg-stone-50/50">
+                        <td className="px-6 py-4 text-xs font-bold text-stone-800">{tx.partnerName || '-'}</td>
+                        <td className="px-6 py-4 text-xs text-stone-500">{tx.userToken || tx.userEmail || '-'}</td>
+                        <td className="px-6 py-4 text-xs text-stone-500 capitalize">{tx.category || '-'}</td>
+                        <td className="px-6 py-4 text-xs text-stone-500">{tx.totalWeight || tx.weight || 0} kg</td>
+                        <td className="px-6 py-4 text-xs font-black text-emerald-600">{tx.totalPoints || 0}</td>
+                        <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : tx.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' : tx.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-stone-100 text-stone-700 border-stone-200'}`}>{tx.status}</span></td>
+                        <td className="px-6 py-4 text-[10px] text-stone-400">{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('id-ID') : '-'}</td>
+                      </tr>
+                    ))}
+                    {instTransactions.length === 0 && <tr><td colSpan={7} className="px-6 py-12 text-center text-stone-400 text-sm">Belum ada transaksi untuk institusi ini.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -7998,22 +8132,23 @@ setProgressMsg('Mendeteksi jenis sampah...');
            console.warn('ONNX pre-filter skipped, using Gemini:', e?.message || 'unknown');
          }
        }
-       try {
-         analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
-       } catch {
-         analysis = {
-           name: 'Sampah Campuran',
-           category: 'Anorganik',
-           composition: [{ material: 'mixed', percentage: 100, description: 'Tidak dapat mengidentifikasi jenis sampah secara pasti.' }],
-           disposalGuide: 'Pisahkan sampah berdasarkan jenis: organik, anorganik, plastik, kertas, logam, atau kaca.',
-           recyclable: true,
-           accuracy: 0.3,
-           tips: 'Pastikan gambar sampah terlihat jelas dan pencahayaan cukup.',
-           environmentalImpact: 'Mengurangi limbah di TPA.',
-           creativeIdeas: ['Daur ulang', 'Kompos'],
-           impactStats: { co2Saved: 0.1, waterSaved: 1, energySaved: 0.05 },
-         };
-       }
+        try {
+          analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+        } catch (e: any) {
+          if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
+          analysis = {
+            name: 'Sampah Campuran',
+            category: 'Anorganik',
+            composition: [{ material: 'mixed', percentage: 100, description: 'Tidak dapat mengidentifikasi jenis sampah secara pasti.' }],
+            disposalGuide: 'Pisahkan sampah berdasarkan jenis: organik, anorganik, plastik, kertas, logam, atau kaca.',
+            recyclable: true,
+            accuracy: 0.3,
+            tips: 'Pastikan gambar sampah terlihat jelas dan pencahayaan cukup.',
+            environmentalImpact: 'Mengurangi limbah di TPA.',
+            creativeIdeas: ['Daur ulang', 'Kompos'],
+            impactStats: { co2Saved: 0.1, waterSaved: 1, energySaved: 0.05 },
+          };
+        }
        setResult(analysis);
 
       // Handle non-waste items - don't award points
