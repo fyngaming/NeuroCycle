@@ -6609,7 +6609,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 };
 
 const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => void; adminUserId?: string | null }) => {
-  const [activeTab, setActiveTab] = useState<'partners' | 'pending_partners' | 'users' | 'transactions' | 'error_logs'>('partners');
+  const [activeTab, setActiveTab] = useState<'partners' | 'pending_partners' | 'users' | 'transactions'>('partners');
   const [institution, setInstitution] = useState<any>(null);
   const [partners, setPartners] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -7342,45 +7342,6 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
                   Belum ada transaksi dari partner institusi ini.
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'error_logs' && (
-          <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden">
-            <div className="p-6 border-b border-stone-100">
-              <h3 className="text-lg font-display font-black">Error Logs</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-stone-50">
-                  <tr>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Severity</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Type</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Message</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Context</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Count</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-50">
-                  {errorLogs.map((log: any) => (
-                    <tr key={log.id} className="hover:bg-stone-50/50">
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
-                          log.severity === 'CRITICAL' ? 'bg-red-100 text-red-600 border-red-200' :
-                          log.severity === 'ERROR' ? 'bg-orange-100 text-orange-600 border-orange-200' :
-                          log.severity === 'WARNING' ? 'bg-amber-100 text-amber-600 border-amber-200' :
-                          'bg-blue-100 text-blue-600 border-blue-200'
-                        }`}>{log.severity}</span>
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-stone-700 font-mono">{log.type}</td>
-                      <td className="px-6 py-4 text-xs text-stone-600 max-w-xs truncate">{log.message}</td>
-                      <td className="px-6 py-4 text-xs text-stone-500">{log.context}</td>
-                      <td className="px-6 py-4 text-xs font-black text-stone-800">{log.count || 1}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
 )}
