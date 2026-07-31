@@ -615,19 +615,19 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={onShowQR}
               className="flex items-center gap-2 py-2 px-4 bg-white rounded-3xl text-stone-700 font-semibold text-xs uppercase tracking-[0.18em] hover:bg-stone-100 active:scale-95 transition-all border border-stone-200">
-              <span className="text-base">ðŸªª</span>
+              <span className="text-base">🪪</span>
               My QR
             </button>
             {isPartner ? (
               <div className="flex items-center gap-2 px-4 py-2 bg-amber-900/30 rounded-3xl text-amber-400 font-semibold text-xs uppercase tracking-[0.18em] border border-amber-700">
-                <span className="text-base">âš ï¸</span>
+                <span className="text-base">⚠️</span>
                 Akun ini sudah terdaftar sebagai Partner
               </div>
             ) : userData.role === 'partner' ? (
               <>
                 <button type="button" onClick={onShowPartnerTx}
                   className="flex items-center gap-2 py-2 px-4 bg-teal-900/30 rounded-3xl text-teal-400 font-semibold text-xs uppercase tracking-[0.18em] hover:bg-teal-800/30 active:scale-95 transition-all border border-teal-700">
-                  <span className="text-base">âž•</span>
+                  <span className="text-base">➕</span>
                   Kirim Setoran
                 </button>
               </>
@@ -885,7 +885,7 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
                     </div>
                     <div className="flex-1">
                       <h4 className="font-bold text-stone-800 text-sm">{tx.partnerName || 'Partner'}</h4>
-                      <p className="text-[9px] text-stone-400 font-medium mt-0.5 capitalize">{tx.category || '-'} â€¢ {tx.totalWeight || tx.weight || 0} kg</p>
+                      <p className="text-[9px] text-stone-400 font-medium mt-0.5 capitalize">{tx.category || '-'} • {tx.totalWeight || tx.weight || 0} kg</p>
                       <p className="text-[9px] text-stone-400">{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('id-ID') : '-'}</p>
                     </div>
                     <div className="text-right">
@@ -978,43 +978,43 @@ const Mascot = ({ streak, name, onRename }: { streak: number, name?: string, onR
   const getStage = () => {
     if (streak >= 60) return {
       icon: <Sparkles size={44} className="text-white" />,
-      aura: true, face: "ðŸŒŒ", label: "Galactic Guardian",
+      aura: true, face: "🌌", label: "Galactic Guardian",
       bgColor: "from-violet-600 via-purple-500 to-indigo-600",
       borderColor: "border-violet-300"
     };
     if (streak >= 30) return {
       icon: <Sparkles size={44} className="text-white" />,
-      aura: true, face: "ðŸ‘‘", label: "Supreme Phoenix",
+      aura: true, face: "👑", label: "Supreme Phoenix",
       bgColor: "from-amber-400 via-orange-500 to-red-600",
       borderColor: "border-amber-300"
     };
     if (streak >= 21) return {
       icon: <Flame size={40} className="text-white" />,
-      aura: true, face: "ðŸ”¥", label: "Inferno Master",
+      aura: true, face: "🔥", label: "Inferno Master",
       bgColor: "from-red-500 via-orange-500 to-yellow-400",
       borderColor: "border-orange-300"
     };
     if (streak >= 14) return {
       icon: <Flame size={40} className="text-white" />,
-      aura: true, face: "ðŸ”¥", label: "Flame Knight",
+      aura: true, face: "🔥", label: "Flame Knight",
       bgColor: "from-orange-500 to-red-500",
       borderColor: "border-orange-200"
     };
     if (streak >= 7) return {
       icon: <Zap size={36} className="text-white" />,
-      aura: false, face: "âš¡", label: "Thunder Spark",
+      aura: false, face: "⚡", label: "Thunder Spark",
       bgColor: "from-yellow-400 to-orange-500",
       borderColor: "border-yellow-200"
     };
     if (streak >= 3) return {
       icon: <Zap size={36} className="text-white" />,
-      aura: false, face: "âœ¨", label: "Bright Spark",
+      aura: false, face: "✨", label: "Bright Spark",
       bgColor: "from-orange-400 to-orange-600",
       borderColor: "border-orange-100"
     };
     return {
       icon: <Sprout size={32} className="text-white" />,
-      aura: false, face: "ðŸŒ±", label: "Little Ember",
+      aura: false, face: "🌱", label: "Little Ember",
       bgColor: "from-orange-300 to-orange-500",
       borderColor: "border-stone-200"
     };
@@ -1094,20 +1094,20 @@ const LevelTimeline = ({ currentScans, currentDeposits, totalDepositKg }: {
   currentDeposits: number;
   totalDepositKg: number;
 }) => {
-  // Skor gabungan: scan + (deposit Ã— 3) + (kg Ã— 0.5)
+  // Skor gabungan: scan + (deposit × 3) + (kg × 0.5)
   const score = currentScans + (currentDeposits * 3) + Math.floor(totalDepositKg * 0.5);
 
   const milestones = [
-    { score: 0,    label: "Pemula",        icon: "ðŸŒ±", color: "stone" },
-    { score: 10,   label: "Penjelajah",    icon: "ðŸŒ¿", color: "emerald" },
-    { score: 25,   label: "Pecinta Hijau", icon: "â™»ï¸", color: "green" },
-    { score: 50,   label: "Pemilah Aktif", icon: "ðŸ“¦", color: "blue" },
-    { score: 100,  label: "Penjaga Alam",  icon: "ðŸŒ³", color: "teal" },
-    { score: 200,  label: "Pahlawan Bumi", icon: "ðŸŒ", color: "cyan" },
-    { score: 350,  label: "Eco Warrior",   icon: "ðŸ›¡ï¸", color: "indigo" },
-    { score: 500,  label: "Green Master",  icon: "ðŸ†", color: "violet" },
-    { score: 750,  label: "Eco Legend",    icon: "ðŸ‘‘", color: "purple" },
-    { score: 1000, label: "NeuroHero",     icon: "ðŸŒŸ", color: "amber" },
+    { score: 0,    label: "Pemula",        icon: "🌱", color: "stone" },
+    { score: 10,   label: "Penjelajah",    icon: "🌿", color: "emerald" },
+    { score: 25,   label: "Pecinta Hijau", icon: "♻️", color: "green" },
+    { score: 50,   label: "Pemilah Aktif", icon: "📦", color: "blue" },
+    { score: 100,  label: "Penjaga Alam",  icon: "🌳", color: "teal" },
+    { score: 200,  label: "Pahlawan Bumi", icon: "🌍", color: "cyan" },
+    { score: 350,  label: "Eco Warrior",   icon: "🛡️", color: "indigo" },
+    { score: 500,  label: "Green Master",  icon: "🏆", color: "violet" },
+    { score: 750,  label: "Eco Legend",    icon: "👑", color: "purple" },
+    { score: 1000, label: "NeuroHero",     icon: "🌟", color: "amber" },
   ];
 
   const currentMilestone = milestones.filter(m => score >= m.score).pop();
@@ -1158,7 +1158,7 @@ const LevelTimeline = ({ currentScans, currentDeposits, totalDepositKg }: {
           </div>
         )}
         <div className="flex justify-between mt-1">
-          <p className="text-[9px] text-stone-400">Scan: {currentScans} Â· Setor: {currentDeposits}x Â· {totalDepositKg.toFixed(1)}kg</p>
+          <p className="text-[9px] text-stone-400">Scan: {currentScans} · Setor: {currentDeposits}x · {totalDepositKg.toFixed(1)}kg</p>
           <p className="text-[9px] text-stone-400">{Math.round(progress)}%</p>
         </div>
       </div>
@@ -1517,7 +1517,7 @@ const UserQRWithPartner = ({
               {selectedPartner.address || 'Alamat belum tersedia'}
             </div>
             <div className="flex items-center gap-2 text-stone-600 text-xs font-medium">
-              <span className="text-emerald-600 shrink-0">ðŸ“ž</span>
+              <span className="text-emerald-600 shrink-0">📞</span>
               {selectedPartner.phone || 'Telp belum tersedia'}
             </div>
           </div>
@@ -1737,7 +1737,7 @@ const WasteBankCalculate = ({
                   </div>
                   <div>
                     <p className="font-bold text-stone-800">{cat.name}</p>
-                    <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">{selectedItems[cat.id]} kg Ã— {cat.pointsPerKg}</p>
+                    <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">{selectedItems[cat.id]} kg × {cat.pointsPerKg}</p>
                   </div>
                 </div>
                 <div className="text-right pr-2">
@@ -1838,7 +1838,7 @@ const WasteBankVerify = ({
   const [txCreated, setTxCreated] = useState(false);
 
   const handleSubmit = async () => {
-    // Jika pilih partner terdaftar â†’ tampilkan QR
+    // Jika pilih partner terdaftar → tampilkan QR
     if (selectedPartnerId !== 'manual') {
       if (selectedItems && userUid && userData && !txCreated && qrToken) {
         setIsUploading(true);
@@ -1893,7 +1893,7 @@ const WasteBankVerify = ({
       setShowQr(true);
       return;
     }
-    // Jika manual â†’ flow lama ke admin review
+    // Jika manual → flow lama ke admin review
     if (!preview || !location.trim()) {
       alert('Harap lengkapi foto bukti dan lokasi TPA/TPU!');
       return;
@@ -1932,7 +1932,7 @@ const WasteBankVerify = ({
               {selectedPartner.address || 'Alamat belum tersedia'}
             </div>
             <div className="flex items-center gap-2 text-stone-600 text-xs font-medium">
-              <span className="text-emerald-600 shrink-0">ðŸ“ž</span>
+              <span className="text-emerald-600 shrink-0">📞</span>
               {selectedPartner.phone || 'Telp belum tersedia'}
             </div>
           </div>
@@ -1991,9 +1991,9 @@ const WasteBankVerify = ({
               onChange={e => setSelectedPartnerId(e.target.value)}
               className="w-full px-4 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-stone-800 outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
             >
-              <option value="manual">ðŸ“ Input manual (review admin)</option>
+              <option value="manual">? Input manual (review admin)</option>
               {partnerList.map(p => (
-                <option key={p.id} value={p.id}>ðŸ¢ {p.name}</option>
+                <option key={p.id} value={p.id}>🏢 {p.name}</option>
               ))}
             </select>
 
@@ -2005,18 +2005,18 @@ const WasteBankVerify = ({
                   {selectedPartner.address || '-'}
                 </div>
                 <div className="flex items-center gap-2 text-stone-600 text-xs">
-                  <span className="text-emerald-600">ðŸ“ž</span>
+                  <span className="text-emerald-600">📞</span>
                   {selectedPartner.phone || '-'}
                 </div>
                 <div className="mt-2 p-2 bg-emerald-100 rounded-xl">
-                  <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">âœ… Bank Sampah Terverifikasi</p>
+                  <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">✅ Bank Sampah Terverifikasi</p>
                   <p className="text-[10px] text-emerald-600 mt-0.5">Klik "Ajukan" untuk tampilkan QR Code Anda</p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Form manual â€” hanya tampil jika pilih manual */}
+          {/* Form manual — hanya tampil jika pilih manual */}
           {selectedPartnerId === 'manual' && (
             <>
               <div className="w-full max-w-xs aspect-square rounded-[48px] border-4 border-dashed border-stone-200 flex flex-col items-center justify-center relative overflow-hidden bg-white group hover:border-emerald-300 transition-all shadow-inner mx-auto">
@@ -2071,7 +2071,7 @@ const WasteBankVerify = ({
                   <ShieldAlert size={16} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Input Manual â†’ Review Admin</p>
+                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Input Manual → Review Admin</p>
                   <p className="text-[10px] font-medium text-amber-800 leading-relaxed">Setoran akan diverifikasi manual oleh Admin. Poin diberikan setelah Admin menyetujui.</p>
                 </div>
               </div>
@@ -2173,7 +2173,7 @@ const NotificationModal = ({
 };
 
 const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdminLogin, onInstAdminRegister, onPartnerLogin }: { onGoogleLogin: () => void, onAdminLogin: (u: string, p: string) => void, onSuperAdminLogin: (email: string, password: string) => void, onInstAdminLogin: (email: string, password: string) => void, onInstAdminRegister: (email: string, password: string, name: string, type: string, address: string, phone: string) => Promise<boolean>, onPartnerLogin: (email: string, password: string) => void }) => {
-  // â”€â”€ State untuk setiap form â”€â”€
+  // ── State untuk setiap form ──
   const [openForm, setOpenForm] = useState<'none' | 'partner' | 'admin' | 'super_admin' | 'inst_admin'>('none');
   const [instMode, setInstMode] = useState<'login' | 'register'>('login');
 
@@ -2268,7 +2268,7 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
           Silakan masuk untuk melanjutkan ke layanan pengelolaan sampah cerdas.
         </p>
 
-        {/* â”€â”€ TOMBOL LOGIN DENGAN GOOGLE (USER) â”€â”€ */}
+        {/* ── TOMBOL LOGIN DENGAN GOOGLE (USER) ── */}
         <button
           onClick={onGoogleLogin}
           className="w-full bg-white text-stone-900 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/20 mb-3"
@@ -2284,7 +2284,7 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
         </div>
 
         <div className="w-full space-y-2">
-          {/* â”€â”€ PARTNER â”€â”€ */}
+          {/* ── PARTNER ── */}
           <div className="w-full">
             <button
               onClick={() => toggleForm('partner')}
@@ -2351,7 +2351,7 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
             </AnimatePresence>
           </div>
 
-          {/* â”€â”€ ADMIN â”€â”€ */}
+          {/* ── ADMIN ── */}
           <div className="w-full">
             <button
               onClick={() => toggleForm('admin')}
@@ -2410,7 +2410,7 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
             </AnimatePresence>
           </div>
 
-          {/* â”€â”€ SUPER ADMIN â”€â”€ */}
+          {/* ── SUPER ADMIN ── */}
           <div className="w-full">
             <button
               onClick={() => toggleForm('super_admin')}
@@ -2469,7 +2469,7 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
             </AnimatePresence>
           </div>
 
-          {/* â”€â”€ INSTITUTION ADMIN â”€â”€ */}
+          {/* ── INSTITUTION ADMIN ── */}
           <div className="w-full">
             <button
               onClick={() => toggleForm('inst_admin')}
@@ -2581,7 +2581,7 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
                           </div>
                         </div>
                         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3">
-                          <p className="text-[10px] text-amber-400 leading-relaxed">âš ï¸ Data Anda akan diverifikasi Super Admin. Setelah disetujui, Anda dapat login.</p>
+                          <p className="text-[10px] text-amber-400 leading-relaxed">⚠️ Data Anda akan diverifikasi Super Admin. Setelah disetujui, Anda dapat login.</p>
                         </div>
                         <button
                           onClick={async () => {
@@ -2606,7 +2606,7 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
           </div>
         </div>
 
-        {/* â”€â”€ MODALS â”€â”€ */}
+        {/* ── MODALS ── */}
 
         {/* Forgot Password */}
         <AnimatePresence>
@@ -2664,15 +2664,15 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
                 </p>
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left mb-5 space-y-2">
                   <div className="flex items-start gap-2">
-                    <span className="text-amber-500 mt-0.5">â³</span>
-                    <p className="text-xs text-amber-800 font-medium leading-relaxed">Mohon tunggu persetujuan <strong>Super Admin</strong>. Biasanya 1Ã—24 jam kerja.</p>
+                    <span className="text-amber-500 mt-0.5">⏳</span>
+                    <p className="text-xs text-amber-800 font-medium leading-relaxed">Mohon tunggu persetujuan <strong>Super Admin</strong>. Biasanya 1×24 jam kerja.</p>
                   </div>
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">ðŸ“§</span>
+                    <span className="text-blue-500 mt-0.5">📧</span>
                     <p className="text-xs text-blue-800 font-medium leading-relaxed">Setelah disetujui, login menggunakan email & password yang didaftarkan.</p>
                   </div>
                   <div className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-0.5">ðŸ””</span>
+                    <span className="text-emerald-500 mt-0.5">🔔</span>
                     <p className="text-xs text-emerald-800 font-medium leading-relaxed">Notifikasi dikirim ketika status pendaftaran diperbarui.</p>
                   </div>
                 </div>
@@ -2828,7 +2828,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     }, (err: any) => {
       console.error("Admin real-time sync error:", err);
       setError(err?.code === 'permission-denied'
-        ? 'Akses ditolak Firestore. Buka Firebase Console â†’ Firestore â†’ Rules, lalu ubah rules menjadi allow read, write: if true; untuk development.'
+        ? 'Akses ditolak Firestore. Buka Firebase Console → Firestore → Rules, lalu ubah rules menjadi allow read, write: if true; untuk development.'
         : `Gagal memuat data: ${err?.message}`);
       setLoading(false);
     });
@@ -2924,7 +2924,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
               updatedData.points = (targetUser.points || 0) + item.totalPoints;
               newNotifications.unshift({
                 id: Math.random().toString(36).substr(2, 9),
-                title: 'Setoran Disetujui! ðŸŽ‰',
+                title: 'Setoran Disetujui! 🎉',
                 message: `Setoran sampah Anda telah diverifikasi. Selamat, Anda mendapatkan ${item.totalPoints} NeuroPoints!`,
                 date: timestamp,
                 type: 'success',
@@ -2934,7 +2934,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             } else {
               newNotifications.unshift({
                 id: Math.random().toString(36).substr(2, 9),
-                title: 'Setoran Ditolak âš ï¸',
+                title: 'Setoran Ditolak ⚠️',
                 message: `Maaf, setoran sampah Anda tidak dapat diverifikasi oleh Admin. Silakan periksa kembali bukti yang dikirimkan.`,
                 date: timestamp,
                 type: 'warning',
@@ -2955,7 +2955,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             if (status === 'Success') {
               newNotifications.unshift({
                 id: Math.random().toString(36).substr(2, 9),
-                title: 'Klaim Hadiah Berhasil! ðŸŽ',
+                title: 'Klaim Hadiah Berhasil! 🎁',
                 message: `Klaim untuk "${item.title}" telah disetujui. Silakan cek DM Instagram untuk instruksi pengambilan.`,
                 date: timestamp,
                 type: 'success',
@@ -3052,7 +3052,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           const notifs = [...(uData.notifications || [])];
           notifs.unshift({
             id: Math.random().toString(36).substr(2, 9),
-            title: 'Pendaftaran Partner Disetujui! ðŸ¢',
+            title: 'Pendaftaran Partner Disetujui! 🏢',
             message: `Selamat, pendaftaran Bank Sampah / TPA Anda (${name}) telah disetujui oleh Admin. Role Anda telah dirubah menjadi Partner. Silahkan masuk ke Dashboard Partner.`,
             date: new Date().toLocaleString('id-ID'),
             type: 'success',
@@ -3090,7 +3090,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           const notifs = [...(uData.notifications || [])];
           notifs.unshift({
             id: Math.random().toString(36).substr(2, 9),
-            title: 'Pendaftaran Partner Ditolak âš ï¸',
+            title: 'Pendaftaran Partner Ditolak ⚠️',
             message: `Maaf, pendaftaran Bank Sampah / TPA Anda (${name}) ditolak dengan alasan: ${reason}. Silahkan daftar kembali dengan berkas yang benar.`,
             date: new Date().toLocaleString('id-ID'),
             type: 'warning',
@@ -3219,7 +3219,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
         const notifs = [...(uData.notifications || [])];
         notifs.unshift({
           id: Math.random().toString(36).substr(2, 9),
-          title: 'Transaksi Flagged Disetujui! ðŸ’°',
+          title: 'Transaksi Flagged Disetujui! 💰',
           message: `Transaksi setoran sampah Anda sebesar ${weight}kg (${category}) telah diverifikasi oleh Admin. Anda mendapatkan ${totalPoints} NeuroPoints!`,
           date: new Date().toLocaleString('id-ID'),
           type: 'success',
@@ -3294,7 +3294,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
         const notifs = [...(uData.notifications || [])];
         notifs.unshift({
           id: Math.random().toString(36).substr(2, 9),
-          title: 'Setoran QR Ditolak âš ï¸',
+          title: 'Setoran QR Ditolak ⚠️',
           message: `Transaksi setoran sampah Anda sebesar ${weight}kg (${category}) ditolak oleh Admin dengan alasan: ${reason}`,
           date: new Date().toLocaleString('id-ID'),
           type: 'warning',
@@ -3822,7 +3822,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         {/* Alasan penolakan jika rejected */}
                         {p.status === 'rejected' && p.rejectionReason && (
                           <div className="bg-red-50 rounded-2xl p-4 border border-red-100 mb-5">
-                            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1.5">âš ï¸ Alasan Penolakan</p>
+                            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1.5">⚠️ Alasan Penolakan</p>
                             <p className="text-sm text-red-700 font-medium">{p.rejectionReason}</p>
                           </div>
                         )}
@@ -4079,7 +4079,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                             </div>
                             <div>
                               <h4 className="font-bold text-stone-900 text-base mb-1">{d.displayName || 'User'}</h4>
-                              <p className="text-xs text-stone-500 font-medium">{d.userEmail} â€¢ {d.date}</p>
+                              <p className="text-xs text-stone-500 font-medium">{d.userEmail} • {d.date}</p>
                               <p className="text-xs font-bold text-stone-400 mt-1">{d.location || 'Lokasi tidak tersedia'}</p>
                               {d.items && d.items.length > 0 && (
                                 <p className="text-xs text-stone-400 mt-0.5">{d.items.map((i: any) => `${i.category} (${i.weight}kg)`).join(', ')}</p>
@@ -4427,12 +4427,12 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         onChange={e => setMissionForm(p => ({ ...p, type: e.target.value }))}
                         className="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-stone-800 outline-none focus:ring-2 focus:ring-emerald-500"
                       >
-                        <option value="scan">ðŸ“· Scan Sampah</option>
-                        <option value="login">ðŸ”‘ Login Harian</option>
-                        <option value="read_article">ðŸ“– Baca Artikel</option>
-                        <option value="photo_proof">ðŸ“¸ Upload Foto Bukti</option>
-                        <option value="deposit">â™»ï¸ Setor Sampah</option>
-                        <option value="quiz">ðŸ§  Quiz Pengetahuan</option>
+                        <option value="scan">📷 Scan Sampah</option>
+                        <option value="login">🔑 Login Harian</option>
+                        <option value="read_article">📖 Baca Artikel</option>
+                        <option value="photo_proof">📸 Upload Foto Bukti</option>
+                        <option value="deposit">♻️ Setor Sampah</option>
+                        <option value="quiz">🧠 Quiz Pengetahuan</option>
                       </select>
                     </div>
                     <div>
@@ -4454,7 +4454,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       />
                     </div>
 
-                    {/* Durasi baca â€” hanya untuk read_article */}
+                    {/* Durasi baca — hanya untuk read_article */}
                     {missionForm.type === 'read_article' && (
                       <div className="col-span-2">
                         <div className="p-5 bg-purple-50 rounded-2xl border border-purple-100">
@@ -4470,19 +4470,19 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                             />
                             <div className="flex-1">
                               <p className="text-xs font-bold text-purple-700">Tombol "Selesai Baca" baru muncul setelah user membaca selama {missionForm.minReadMinutes} menit.</p>
-                              <p className="text-[10px] text-purple-500 mt-1">Rekomendasi: 2â€“5 menit untuk artikel pendek, 5â€“10 menit untuk artikel panjang.</p>
+                              <p className="text-[10px] text-purple-500 mt-1">Rekomendasi: 2–5 menit untuk artikel pendek, 5–10 menit untuk artikel panjang.</p>
                             </div>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Form Input Soal & Jawaban Quiz â€” hanya untuk quiz */}
+                    {/* Form Input Soal & Jawaban Quiz — hanya untuk quiz */}
                     {missionForm.type === 'quiz' && (
                       <div className="col-span-2 space-y-6 p-6 bg-indigo-50/50 rounded-[32px] border border-indigo-100">
                         <div className="flex items-center justify-between border-b border-indigo-100 pb-4">
                           <h4 className="font-display font-bold text-indigo-900 text-sm flex items-center gap-2">
-                            <span>ðŸ§  Atur Pertanyaan & Kunci Jawaban</span>
+                            <span>🧠 Atur Pertanyaan & Kunci Jawaban</span>
                           </h4>
                           <button
                             type="button"
@@ -4648,7 +4648,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                           expiresAt: new Date(missionForm.expiresAt).toISOString(),
                           status: 'active',
                           createdAt: new Date().toISOString(),
-                          icon: missionForm.type === 'quiz' ? 'ðŸ§ ' : 'ðŸŽ¯',
+                          icon: missionForm.type === 'quiz' ? '🧠' : '🎯',
                         });
                         setMissionForm(p => ({ ...p, title: '', description: '' }));
                         setQuizQuestions([
@@ -4689,7 +4689,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${
                               m.status === 'active' ? 'bg-emerald-100' : m.status === 'expired' ? 'bg-stone-100' : 'bg-amber-100'
                             }`}>
-                              {m.icon || 'ðŸŽ¯'}
+                              {m.icon || '🎯'}
                             </div>
                             <div>
                               <h4 className="font-bold text-stone-800">{m.title}</h4>
@@ -4699,7 +4699,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                   m.status === 'expired' ? 'bg-stone-200 text-stone-500' :
                                   'bg-amber-100 text-amber-700'
                                 }`}>{m.status}</span>
-                                <span className="text-[10px] text-stone-400 font-bold">{m.type} Â· Target: {m.target} Â· +{m.rewardPoints} NP</span>
+                                <span className="text-[10px] text-stone-400 font-bold">{m.type} · Target: {m.target} · +{m.rewardPoints} NP</span>
                               </div>
                             </div>
                           </div>
@@ -4779,9 +4779,9 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Cara dapat link Google Drive:</p>
                         <ol className="text-[10px] text-blue-600 space-y-1 list-decimal list-inside leading-relaxed">
                           <li>Upload PDF ke Google Drive</li>
-                          <li>Klik kanan file â†’ <strong>Share</strong></li>
+                          <li>Klik kanan file → <strong>Share</strong></li>
                           <li>Ubah akses ke <strong>"Anyone with the link"</strong></li>
-                          <li>Klik <strong>Copy link</strong> â†’ paste di sini</li>
+                          <li>Klik <strong>Copy link</strong> → paste di sini</li>
                         </ol>
                         <p className="text-[10px] text-blue-500 mt-2">Format: <span className="font-mono">https://drive.google.com/file/d/ID_FILE/view</span></p>
                       </div>
@@ -4789,7 +4789,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       {articleForm.pdfUrl.includes('drive.google.com') && (
                         <div className="mt-2 flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
                           <CheckCircle size={14} className="text-emerald-600 shrink-0" />
-                          <p className="text-[10px] font-bold text-emerald-700">Link Google Drive terdeteksi âœ“</p>
+                          <p className="text-[10px] font-bold text-emerald-700">Link Google Drive terdeteksi ✓</p>
                         </div>
                       )}
                     </div>
@@ -4819,16 +4819,16 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         onChange={e => setArticleForm(p => ({ ...p, icon: e.target.value }))}
                         className="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-stone-800 outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="Recycle">â™»ï¸ Recycle</option>
-                        <option value="Leaf">ðŸŒ¿ Leaf</option>
-                        <option value="Droplets">ðŸ’§ Droplets</option>
-                        <option value="TrendingDown">ðŸ“‰ TrendingDown</option>
-                        <option value="Sprout">ðŸŒ± Sprout</option>
-                        <option value="Trees">ðŸŒ³ Trees</option>
-                        <option value="AlertTriangle">âš ï¸ AlertTriangle</option>
-                        <option value="Lightbulb">ðŸ’¡ Lightbulb</option>
-                        <option value="ShoppingBag">ðŸ›ï¸ ShoppingBag</option>
-                        <option value="Zap">âš¡ Zap</option>
+                        <option value="Recycle">♻️ Recycle</option>
+                        <option value="Leaf">🌿 Leaf</option>
+                        <option value="Droplets">💧 Droplets</option>
+                        <option value="TrendingDown">📉 TrendingDown</option>
+                        <option value="Sprout">🌱 Sprout</option>
+                        <option value="Trees">🌳 Trees</option>
+                        <option value="AlertTriangle">⚠️ AlertTriangle</option>
+                        <option value="Lightbulb">💡 Lightbulb</option>
+                        <option value="ShoppingBag">🛍️️ ShoppingBag</option>
+                        <option value="Zap">⚡ Zap</option>
                       </select>
                     </div>
                     <div>
@@ -4930,7 +4930,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                 }`}>
                                   {a.isPublished ? 'Published' : 'Draft'}
                                 </span>
-                                <span className="text-[10px] text-stone-400 font-bold">{a.author} Â· {a.readTime}</span>
+                                <span className="text-[10px] text-stone-400 font-bold">{a.author} · {a.readTime}</span>
                               </div>
                             </div>
                           </div>
@@ -5007,10 +5007,10 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                             </button>
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-lg">{p.mission?.icon || 'ðŸŽ¯'}</span>
+                                <span className="text-lg">{p.mission?.icon || '🎯'}</span>
                                 <p className="font-bold text-stone-800">{p.mission?.title}</p>
                               </div>
-                              <p className="text-xs text-stone-500 mb-1">{p.user?.displayName} Â· {p.user?.email}</p>
+                              <p className="text-xs text-stone-500 mb-1">{p.user?.displayName} · {p.user?.email}</p>
                               <p className="text-[10px] text-stone-400">Progress saat ini: {p.current}/{p.target}</p>
                               <div className="flex gap-3 mt-4">
                                 <button
@@ -5070,7 +5070,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                               </td>
                               <td className="px-6 py-5">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-lg">{p.mission?.icon || 'ðŸŽ¯'}</span>
+                                  <span className="text-lg">{p.mission?.icon || '🎯'}</span>
                                   <div>
                                     <p className="font-bold text-stone-800 text-sm">{p.mission?.title}</p>
                                     <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
@@ -5106,7 +5106,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                 )}
                                 {p.mission?.type === 'scan' && <p className="text-[10px] text-emerald-600 font-bold">{p.current}x scan</p>}
                                 {p.mission?.type === 'deposit' && <p className="text-[10px] text-teal-600 font-bold">{p.current}x setor</p>}
-                                {p.mission?.type === 'login' && <p className="text-[10px] text-blue-600 font-bold">Login âœ“</p>}
+                                {p.mission?.type === 'login' && <p className="text-[10px] text-blue-600 font-bold">Login ✓</p>}
                               </td>
                               <td className="px-6 py-5">
                                 <div className="flex items-center gap-2">
@@ -5322,9 +5322,9 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">ðŸ“¸ Preview Bukti Foto</p>
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">📸 Preview Bukti Foto</p>
                   <h3 className="font-bold text-stone-800">{selectedPhotoPreview.user}</h3>
-                  <p className="text-xs text-stone-400">{selectedPhotoPreview.title}{selectedPhotoPreview.date ? ` Â· ${selectedPhotoPreview.date}` : ''}</p>
+                  <p className="text-xs text-stone-400">{selectedPhotoPreview.title}{selectedPhotoPreview.date ? ` · ${selectedPhotoPreview.date}` : ''}</p>
                 </div>
                 <button onClick={() => setSelectedPhotoPreview(null)} className="p-2 bg-stone-100 rounded-xl text-stone-500">
                   <X size={18} />
@@ -5353,7 +5353,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">ðŸ“¸ Bukti Foto Misi</p>
+                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">📸 Bukti Foto Misi</p>
                   <h3 className="font-bold text-stone-800">{selectedProof.user}</h3>
                   <p className="text-xs text-stone-400">{selectedProof.mission}</p>
                 </div>
@@ -5799,7 +5799,7 @@ const ReadingTimer = ({
     <div className="fixed bottom-0 left-0 right-0 p-5 bg-white/95 backdrop-blur-md border-t border-stone-100 max-w-md mx-auto">
       <div className="mb-3 p-3 bg-purple-50 rounded-2xl border border-purple-100 flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest">ðŸ“– {missionTitle}</p>
+          <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest">📖 {missionTitle}</p>
           <p className="text-[10px] text-purple-500 mt-0.5">Progress: {progressCurrent}/{progressTarget}</p>
         </div>
         {!done && (
@@ -5831,7 +5831,7 @@ const ReadingTimer = ({
         }`}
       >
         {done ? (
-          <><CheckCircle size={20} /> Selesai Baca â€” Hitung Progress Misi</>
+          <><CheckCircle size={20} /> Selesai Baca — Hitung Progress Misi</>
         ) : (
           <><Clock size={18} /> Baca dulu {mm}:{ss} lagi...</>
         )}
@@ -6101,7 +6101,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                     const notifs = [...(adminUser.notifications || [])];
                                     notifs.unshift({
                                       id: Math.random().toString(36).substr(2, 9),
-                                      title: 'Institusi Disetujui! Ã°Å¸Å½',
+                                      title: 'Institusi Disetujui! 🎊',
                                       message: `Institusi "${inst.name}" Anda telah disetujui oleh Super Admin. Anda sekarang bisa login sebagai Institution Admin.`,
                                       date: new Date().toLocaleString('id-ID'),
                                       type: 'success',
@@ -6129,7 +6129,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                     const notifs = [...(adminUser.notifications || [])];
                                     notifs.unshift({
                                       id: Math.random().toString(36).substr(2, 9),
-                                      title: 'Institusi Ditolak Ã¢Å¡ÂªÃ¯Â¸Â',
+                                      title: 'Institusi Ditolak ⚪️',
                                       message: `Institusi "${inst.name}" ditolak oleh Super Admin. Alasan: ${reason}`,
                                       date: new Date().toLocaleString('id-ID'),
                                       type: 'warning',
@@ -6171,11 +6171,11 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           {[
             { id: 'institutions', label: 'Institutions' },
             { id: 'partners', label: 'Partners' },
-            { id: 'partner_approvals', label: 'âœ… Persetujuan Partner' },
+            { id: 'partner_approvals', label: '✅ Persetujuan Partner' },
             { id: 'users', label: 'Users' },
             { id: 'user_assignments', label: 'Kelola User' },
             { id: 'transactions', label: 'Transactions' },
-            { id: 'inst_passwords', label: 'ðŸ” Password Institusi' },
+            { id: 'inst_passwords', label: '? Password Institusi' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
@@ -6283,7 +6283,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                     const notifs = [...(instAdmin.notifications || [])];
                                     notifs.unshift({
                                       id: Math.random().toString(36).substr(2, 9),
-                                      title: 'âœ… Partner Disetujui',
+                                      title: '✅ Partner Disetujui',
                                       message: `Partner "${p.name}" telah disetujui oleh Super Admin dan sekarang dapat login ke sistem.`,
                                       date: new Date().toLocaleString('id-ID'),
                                       type: 'success',
@@ -6291,7 +6291,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                     });
                                     await updateDoc(doc(db, 'users', instAdmin.id), { notifications: notifs });
                                   }
-                                  alert(`âœ… Partner "${p.name}" berhasil disetujui! Partner sekarang dapat login.`);
+                                  alert(`✅ Partner "${p.name}" berhasil disetujui! Partner sekarang dapat login.`);
                                 } catch (e) {
                                   console.error('Gagal approve partner:', e);
                                   alert('Gagal menyetujui partner.');
@@ -6312,7 +6312,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                     rejectedAt: new Date().toISOString(),
                                     rejectedBy: 'super_admin'
                                   });
-                                  alert(`âŒ Partner "${p.name}" telah ditolak.`);
+                                  alert(`❌ Partner "${p.name}" telah ditolak.`);
                                 } catch (e) {
                                   console.error('Gagal reject partner:', e);
                                   alert('Gagal menolak partner.');
@@ -6574,7 +6574,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 </div>
                 <div>
                   <h3 className="text-lg font-display font-black">Password Admin Institusi</h3>
-                  <p className="text-xs text-stone-400">Data lengkap pendaftar institusi â€” email, password, kode, dan status persetujuan</p>
+                  <p className="text-xs text-stone-400">Data lengkap pendaftar institusi — email, password, kode, dan status persetujuan</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -6658,9 +6658,9 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                             inst.approvalStatus === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
                             'bg-stone-100 text-stone-500 border-stone-200'
                           }`}>
-                            {inst.approvalStatus === 'approved' ? 'âœ“ Disetujui' :
-                             inst.approvalStatus === 'pending'  ? 'â³ Menunggu' :
-                             inst.approvalStatus === 'rejected' ? 'âœ— Ditolak' : 'Belum Diproses'}
+                            {inst.approvalStatus === 'approved' ? '✓ Disetujui' :
+                             inst.approvalStatus === 'pending'  ? '⏳ Menunggu' :
+                             inst.approvalStatus === 'rejected' ? '✗ Ditolak' : 'Belum Diproses'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -7439,9 +7439,9 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
              >
                <div className="flex items-center justify-between mb-4">
                  <div>
-                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">ðŸ“¸ Preview Bukti Foto</p>
+                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">📸 Preview Bukti Foto</p>
                    <h3 className="font-bold text-stone-800">{selectedPhotoPreview.user}</h3>
-                   <p className="text-xs text-stone-400">{selectedPhotoPreview.title}{selectedPhotoPreview.date ? ` Â· ${selectedPhotoPreview.date}` : ''}</p>
+                   <p className="text-xs text-stone-400">{selectedPhotoPreview.title}{selectedPhotoPreview.date ? ` · ${selectedPhotoPreview.date}` : ''}</p>
                  </div>
                  <button onClick={() => setSelectedPhotoPreview(null)} className="p-2 bg-stone-100 rounded-xl text-stone-500 hover:bg-stone-200 transition-colors">
                    <X size={18} />
@@ -8129,7 +8129,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
 
       // Handle non-waste items - don't award points
       if (analysis.isNotWaste || analysis.category === 'Bukan Sampah') {
-        alert(`Ã°Å¸Å¸Å” Item ini bukan sampah: ${analysis.name}. Tidak mendapatkan poin.`);
+        alert(`🚫 Item ini bukan sampah: ${analysis.name}. Tidak mendapatkan poin.`);
         setState('main');
         return;
       }
@@ -8221,7 +8221,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
 
       if (errorMsg.includes('BUKAN_SAMPAH')) {
         const cleanMsg = errorMsg.replace('BUKAN_SAMPAH:', '').trim();
-        alert(`ðŸš« ${cleanMsg}`);
+        alert(`🚫 ${cleanMsg}`);
         setState('main');
         return;
       }
@@ -8316,7 +8316,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
 
     const adminIG = 'neurocycle.id';
     const dmMessage = encodeURIComponent(
-      `Halo Admin NeuroCycle! ðŸ‘‹\n\nSaya ingin menukarkan poin saya:\n\nðŸŽ Hadiah: ${offer.title}\nðŸ’° Poin: ${offer.points} NP\nðŸ†” ID Klaim: ${newClaim.id}\nðŸ“§ Email: ${userData.email}\n\nMohon konfirmasi dan instruksi selanjutnya. Terima kasih!`
+      `Halo Admin NeuroCycle! 👋\n\nSaya ingin menukarkan poin saya:\n\n🎁 Hadiah: ${offer.title}\n💰 Poin: ${offer.points} NP\n🆔 ID Klaim: ${newClaim.id}\n📧 Email: ${userData.email}\n\nMohon konfirmasi dan instruksi selanjutnya. Terima kasih!`
     );
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const instagramUrl = isMobile
@@ -8325,9 +8325,9 @@ setProgressMsg('Mendeteksi jenis sampah...');
     window.open(instagramUrl, '_blank');
     const plainMessage = `Halo Admin NeuroCycle! Saya ingin menukarkan poin saya. Hadiah: ${offer.title} | Poin: ${offer.points} NP | ID Klaim: ${newClaim.id} | Email: ${userData.email}. Mohon konfirmasi. Terima kasih!`;
     navigator.clipboard.writeText(plainMessage).then(() => {
-      alert(`âœ… Klaim berhasil diajukan!\n\nPesan sudah disalin ke clipboard.\nInstagram DM admin sudah terbuka â€” paste pesan tersebut untuk konfirmasi klaim kamu.\n\nID Klaim: ${newClaim.id}`);
+      alert(`✅ Klaim berhasil diajukan!\n\nPesan sudah disalin ke clipboard.\nInstagram DM admin sudah terbuka — paste pesan tersebut untuk konfirmasi klaim kamu.\n\nID Klaim: ${newClaim.id}`);
     }).catch(() => {
-      alert(`âœ… Klaim berhasil diajukan!\n\nSilakan DM Instagram @neurocycle.id dengan menyebutkan:\n- Hadiah: ${offer.title}\n- ID Klaim: ${newClaim.id}\n- Email: ${userData.email}`);
+      alert(`✅ Klaim berhasil diajukan!\n\nSilakan DM Instagram @neurocycle.id dengan menyebutkan:\n- Hadiah: ${offer.title}\n- ID Klaim: ${newClaim.id}\n- Email: ${userData.email}`);
     });
   };
 
@@ -8416,13 +8416,13 @@ setProgressMsg('Mendeteksi jenis sampah...');
                   onClick={() => { setState('main'); setTimeout(() => fileInputRef.current?.click(), 100); }}
                   className="w-full py-4 rounded-3xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 transition-all"
                 >
-                  ðŸ“· Ambil Foto Kamera
+                  📷 Ambil Foto Kamera
                 </button>
                 <button
                   onClick={() => { setState('main'); setTimeout(() => galleryInputRef.current?.click(), 100); }}
                   className="w-full py-4 rounded-3xl bg-stone-900 text-white font-bold shadow-lg shadow-stone-300/30 hover:bg-stone-800 transition-all"
                 >
-                  ðŸ–¼ï¸ Unggah dari Galeri
+                  🖼️ Unggah dari Galeri
                 </button>
                 <button
                   onClick={() => setState('main')}
@@ -8647,7 +8647,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
                     <>
                       <div className="flex justify-between text-[10px] text-emerald-100 font-bold uppercase tracking-widest">
                         <span>Level: {current.label}</span>
-                        <span>{next ? `${next.score - score} pts menuju ${next.label}` : 'MAX LEVEL ðŸŒŸ'}</span>
+                        <span>{next ? `${next.score - score} pts menuju ${next.label}` : 'MAX LEVEL 🌟'}</span>
                       </div>
                       <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                         <motion.div
@@ -8658,7 +8658,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-emerald-100 bg-white/10 p-2 rounded-xl">
                         <Info size={12} />
-                        <span>Skor: {score} pts Â· Scan {userData.scans}x Â· Setor {totalDeposits}x Â· {totalKg.toFixed(1)}kg</span>
+                        <span>Skor: {score} pts · Scan {userData.scans}x · Setor {totalDeposits}x · {totalKg.toFixed(1)}kg</span>
                       </div>
                     </>
                   );
@@ -8687,7 +8687,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <p className="text-sm font-bold text-stone-800">{deposit.date}</p>
-                          <p className="text-[11px] text-stone-500 mt-1">{deposit.totalWeight.toFixed(1)} kg â€” {deposit.items.length} jenis</p>
+                          <p className="text-[11px] text-stone-500 mt-1">{deposit.totalWeight.toFixed(1)} kg — {deposit.items.length} jenis</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black ${deposit.status === 'Pending' ? 'bg-amber-100 text-amber-700' : deposit.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                           {deposit.status}
@@ -8928,7 +8928,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
               )}
             </div>
 
-            {/* Tombol Selesai Baca â€” muncul jika dari misi, dengan countdown timer */}
+            {/* Tombol Selesai Baca — muncul jika dari misi, dengan countdown timer */}
             {missionArticleContext && (
               <ReadingTimer
                 minReadMinutes={missionArticleContext.mission.minReadMinutes || 2}
