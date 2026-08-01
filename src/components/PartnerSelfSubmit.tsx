@@ -17,7 +17,12 @@ const PartnerSelfSubmit = ({ onClose, onSuccess }: { onClose: () => void, onSucc
   useEffect(() => {
     const fetchInstitutions = async () => {
       try {
-        const q = query(collection(db, 'institutions'), where('status', '==', 'active'));
+        // Hanya tampilkan institusi yang sudah disetujui DAN aktif
+        const q = query(
+          collection(db, 'institutions'),
+          where('approvalStatus', '==', 'approved'),
+          where('status', '==', 'active')
+        );
         const snap = await getDocs(q);
         setInstitutions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) {

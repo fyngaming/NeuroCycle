@@ -6071,6 +6071,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tipe</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Email</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Approve Status</th>
+                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-center">Partner</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-right">Aksi</th>
@@ -6087,76 +6088,160 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                           {inst.approvalStatus === 'approved' ? 'Disetujui' : inst.approvalStatus === 'pending' ? 'Menunggu' : inst.approvalStatus === 'rejected' ? 'Ditolak' : 'Belum Diproses'}
                         </span>
                       </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${inst.status === 'active' ? 'bg-blue-100 text-blue-700 border-blue-200' : inst.status === 'suspended' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-stone-100 text-stone-500 border-stone-200'}`}>
+                          {inst.status === 'active' ? 'Aktif' : inst.status === 'suspended' ? 'Suspended' : inst.status || 'Pending'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-center text-xs font-black text-stone-800">{partners.filter((p: any) => p.institutionId === inst.id).length}</td>
                       <td className="px-6 py-4 text-xs text-stone-400">{inst.createdAt ? new Date(inst.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td>
                       <td className="px-6 py-4 text-right">
-                        {inst.approvalStatus === 'pending' ? (
-                          <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {/* Approve / Tolak — hanya untuk pending */}
+                          {inst.approvalStatus === 'pending' && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await updateDoc(doc(db, 'institutions', inst.id), { approvalStatus: 'approved', status: 'active' });
+                                    const adminUser = users.find((u: any) => u.role === 'institution_admin' && u.institutionId === inst.id);
+                                    if (adminUser) {
+                                      const notifs = [...(adminUser.notifications || [])];
+                                      notifs.unshift({
+                                        id: Math.random().toString(36).substr(2, 9),
+                                        title: 'Institusi Disetujui! 🎊',
+                                        message: `Institusi "${inst.name}" Anda telah disetujui oleh Super Admin. Anda sekarang bisa login sebagai Institution Admin.`,
+                                        date: new Date().toLocaleString('id-ID'),
+                                        type: 'success',
+                                        isRead: false
+                                      });
+                                      await updateDoc(doc(db, 'users', adminUser.id || adminUser.uid), { notifications: notifs });
+                                    }
+                                    alert(`✅ Institusi "${inst.name}" berhasil disetujui!`);
+                                  } catch (e) {
+                                    console.error('Gagal approve institusi:', e);
+                                    alert('Gagal menyetujui institusi');
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  const reason = prompt(`Alasan penolakan untuk "${inst.name}":`) || 'Tidak memenuhi kriteria';
+                                  try {
+                                    await updateDoc(doc(db, 'institutions', inst.id), { approvalStatus: 'rejected', status: 'suspended' });
+                                    const adminUser = users.find((u: any) => u.role === 'institution_admin' && u.institutionId === inst.id);
+                                    if (adminUser) {
+                                      const notifs = [...(adminUser.notifications || [])];
+                                      notifs.unshift({
+                                        id: Math.random().toString(36).substr(2, 9),
+                                        title: 'Institusi Ditolak',
+                                        message: `Institusi "${inst.name}" ditolak oleh Super Admin. Alasan: ${reason}`,
+                                        date: new Date().toLocaleString('id-ID'),
+                                        type: 'warning',
+                                        isRead: false
+                                      });
+                                      await updateDoc(doc(db, 'users', adminUser.id || adminUser.uid), { notifications: notifs });
+                                    }
+                                    alert(`❌ Institusi "${inst.name}" ditolak.`);
+                                  } catch (e) {
+                                    console.error('Gagal reject institusi:', e);
+                                    alert('Gagal menolak institusi');
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100 transition-all active:scale-95"
+                              >
+                                Tolak
+                              </button>
+                            </>
+                          )}
+
+                          {/* Tombol Aktifkan — untuk yang status bukan active (suspended/rejected/belum diproses) */}
+                          {inst.status !== 'active' && (
                             <button
                               onClick={async () => {
+                                if (!window.confirm(`Aktifkan institusi "${inst.name}"? Institusi akan bisa digunakan partner untuk mendaftar.`)) return;
                                 try {
-                                  await updateDoc(doc(db, 'institutions', inst.id), { approvalStatus: 'approved', status: 'active' });
+                                  await updateDoc(doc(db, 'institutions', inst.id), {
+                                    status: 'active',
+                                    approvalStatus: 'approved'
+                                  });
                                   const adminUser = users.find((u: any) => u.role === 'institution_admin' && u.institutionId === inst.id);
                                   if (adminUser) {
                                     const notifs = [...(adminUser.notifications || [])];
                                     notifs.unshift({
                                       id: Math.random().toString(36).substr(2, 9),
-                                      title: 'Institusi Disetujui! 🎊',
-                                      message: `Institusi "${inst.name}" Anda telah disetujui oleh Super Admin. Anda sekarang bisa login sebagai Institution Admin.`,
+                                      title: '✅ Institusi Diaktifkan',
+                                      message: `Institusi "${inst.name}" telah diaktifkan oleh Super Admin. Anda sekarang bisa login.`,
                                       date: new Date().toLocaleString('id-ID'),
                                       type: 'success',
                                       isRead: false
                                     });
-                                    await updateDoc(doc(db, 'users', adminUser.uid), { notifications: notifs });
+                                    await updateDoc(doc(db, 'users', adminUser.id || adminUser.uid), { notifications: notifs });
                                   }
-                                  alert('Institusi disetujui!');
+                                  alert(`✅ Institusi "${inst.name}" berhasil diaktifkan!`);
                                 } catch (e) {
-                                  console.error('Gagal approve institusi:', e);
-                                  alert('Gagal menyetujui institusi');
+                                  console.error('Gagal aktifkan institusi:', e);
+                                  alert('Gagal mengaktifkan institusi');
                                 }
                               }}
-                              className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100"
+                              className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 shadow-sm"
                             >
-                              Approve
+                              Aktifkan
                             </button>
+                          )}
+
+                          {/* Tombol Nonaktifkan/Ban — untuk yang status active atau approved */}
+                          {inst.status === 'active' && (
                             <button
                               onClick={async () => {
-                                const reason = prompt('Masukkan alasan penolakan:') || 'Tidak memenuhi kriteria';
+                                const reason = prompt(`Alasan nonaktifkan/banned "${inst.name}"? (opsional)`);
+                                if (reason === null) return; // user cancel
                                 try {
-                                  await updateDoc(doc(db, 'institutions', inst.id), { approvalStatus: 'rejected', status: 'suspended' });
+                                  await updateDoc(doc(db, 'institutions', inst.id), {
+                                    status: 'suspended',
+                                    approvalStatus: 'rejected',
+                                    suspendReason: reason || 'Dinonaktifkan oleh Super Admin',
+                                    suspendedAt: new Date().toISOString()
+                                  });
                                   const adminUser = users.find((u: any) => u.role === 'institution_admin' && u.institutionId === inst.id);
                                   if (adminUser) {
                                     const notifs = [...(adminUser.notifications || [])];
                                     notifs.unshift({
                                       id: Math.random().toString(36).substr(2, 9),
-                                      title: 'Institusi Ditolak ⚪️',
-                                      message: `Institusi "${inst.name}" ditolak oleh Super Admin. Alasan: ${reason}`,
+                                      title: '🚫 Institusi Dinonaktifkan',
+                                      message: `Institusi "${inst.name}" telah dinonaktifkan oleh Super Admin.${reason ? ` Alasan: ${reason}` : ''}`,
                                       date: new Date().toLocaleString('id-ID'),
                                       type: 'warning',
                                       isRead: false
                                     });
-                                    await updateDoc(doc(db, 'users', adminUser.uid), { notifications: notifs });
+                                    await updateDoc(doc(db, 'users', adminUser.id || adminUser.uid), { notifications: notifs });
                                   }
-                                  alert('Institusi ditolak!');
+                                  alert(`🚫 Institusi "${inst.name}" berhasil dinonaktifkan.`);
                                 } catch (e) {
-                                  console.error('Gagal reject institusi:', e);
-                                  alert('Gagal menolak institusi');
+                                  console.error('Gagal nonaktifkan institusi:', e);
+                                  alert('Gagal menonaktifkan institusi');
                                 }
                               }}
-                              className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100"
+                              className="px-3 py-1.5 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-sm"
                             >
-                              Tolak
+                              Nonaktifkan
                             </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-stone-400">-</span>
-                        )}
+                          )}
+
+                          {/* Jika tidak ada aksi yang relevan */}
+                          {inst.approvalStatus !== 'pending' && inst.status !== 'active' && inst.status === 'suspended' && (
+                            <span className="text-[10px] text-stone-400 italic">Suspended</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {institutions.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-stone-400 text-sm">
+                      <td colSpan={8} className="px-6 py-12 text-center text-stone-400 text-sm">
                         Belum ada institusi terdaftar.
                       </td>
                     </tr>
