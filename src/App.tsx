@@ -6557,50 +6557,113 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
         {activeTab === 'transactions' && (
           <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden">
-            <div className="p-6 border-b border-stone-100">
-              <h3 className="text-lg font-display font-black">Semua Transaksi</h3>
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-display font-black">Semua Transaksi</h3>
+                <p className="text-xs text-stone-500 mt-1">Detail setoran sampah per transaksi</p>
+              </div>
+              <span className="text-xs font-black text-stone-400 bg-stone-50 border border-stone-200 px-3 py-1.5 rounded-xl">
+                {transactions.length} transaksi
+              </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-stone-50">
-                  <tr>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Partner</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">User</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Kategori</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Berat</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Poin</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-50">
-                  {transactions.slice(0, 100).map((tx: any) => (
-                    <tr key={tx.id} className="hover:bg-stone-50/50">
-                      <td className="px-6 py-4 text-xs font-bold text-stone-800">{tx.partnerName || '-'}</td>
-                      <td className="px-6 py-4 text-xs text-stone-500">{tx.userToken || '-'}</td>
-                      <td className="px-6 py-4 text-xs text-stone-500 capitalize">{tx.category || '-'}</td>
-                      <td className="px-6 py-4 text-xs text-stone-500">{tx.totalWeight || tx.weight || 0} kg</td>
-                      <td className="px-6 py-4 text-xs font-black text-emerald-600">{tx.totalPoints || 0}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
-                          tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                          tx.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                          tx.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
-                          tx.status === 'flagged_for_review' ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                          'bg-stone-100 text-stone-700 border-stone-200'
-                        }`}>{tx.status}</span>
-                      </td>
-                      <td className="px-6 py-4 text-[10px] text-stone-400">{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('id-ID') : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {transactions.length === 0 && (
-                <div className="px-6 py-12 text-center text-stone-400 text-sm">
-                  Belum ada transaksi.
-                </div>
-              )}
+
+            {/* Header kolom */}
+            <div className="hidden md:grid grid-cols-[2fr_1.5fr_2.5fr_1fr_1fr_1.5fr] gap-4 px-6 py-3 bg-stone-50 border-b border-stone-100">
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Partner</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">User</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Setoran</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Bukti</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Tanggal</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Status</span>
             </div>
+
+            <div className="divide-y divide-stone-50">
+              {transactions.slice(0, 100).map((tx: any) => {
+                const itemsList: {category: string; weight: number}[] = tx.items && tx.items.length > 0
+                  ? tx.items
+                  : tx.category
+                    ? [{ category: tx.category, weight: tx.totalWeight || tx.weight || 0 }]
+                    : [];
+                const totalW = tx.totalWeight || tx.weight || itemsList.reduce((s: number, i: any) => s + (i.weight || 0), 0);
+
+                return (
+                  <div key={tx.id} className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_2.5fr_1fr_1fr_1.5fr] gap-4 px-6 py-5 hover:bg-stone-50/60 transition-colors items-start">
+
+                    {/* Partner */}
+                    <div>
+                      <p className="text-sm font-bold text-stone-800 leading-tight">{tx.partnerName || '-'}</p>
+                      {tx.partnerEmail && <p className="text-[10px] text-stone-400 mt-0.5">{tx.partnerEmail}</p>}
+                    </div>
+
+                    {/* User */}
+                    <div>
+                      <p className="text-xs font-semibold text-stone-700">{tx.userName || tx.userDisplayName || '-'}</p>
+                      <p className="text-[10px] text-stone-400 font-mono mt-0.5 truncate max-w-[140px]">{tx.userEmail || tx.userToken || ''}</p>
+                    </div>
+
+                    {/* Setoran detail */}
+                    <div>
+                      <p className="text-base font-black text-stone-900">{typeof totalW === 'number' ? totalW.toFixed(1) : totalW} kg</p>
+                      {itemsList.length > 0 ? (
+                        <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
+                          {itemsList.map((it: any) => `${it.category} (${it.weight}kg)`).join(', ')}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-stone-400 italic mt-0.5">-</p>
+                      )}
+                      <p className="text-xs font-black text-emerald-600 mt-1">+{(tx.totalPoints || 0).toLocaleString()} NP</p>
+                    </div>
+
+                    {/* Bukti foto */}
+                    <div>
+                      {tx.photoUrl ? (
+                        <img
+                          src={tx.photoUrl}
+                          alt="bukti"
+                          className="w-12 h-12 rounded-xl object-cover border border-stone-200 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => window.open(tx.photoUrl, '_blank')}
+                        />
+                      ) : (
+                        <span className="text-[10px] text-stone-300 italic">Tanpa foto</span>
+                      )}
+                    </div>
+
+                    {/* Tanggal */}
+                    <div>
+                      <p className="text-[11px] text-stone-600 font-semibold leading-snug">
+                        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                      </p>
+                      <p className="text-[10px] text-stone-400 mt-0.5">
+                        {tx.createdAt ? new Date(tx.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </p>
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        tx.status === 'pending'  ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                        tx.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
+                        tx.status === 'flagged_for_review' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                        'bg-stone-100 text-stone-700 border-stone-200'
+                      }`}>
+                        {tx.status === 'approved' ? 'Diterima' :
+                         tx.status === 'pending' ? 'Menunggu' :
+                         tx.status === 'rejected' ? 'Ditolak' :
+                         tx.status === 'flagged_for_review' ? 'Flagged' :
+                         tx.status || '-'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {transactions.length === 0 && (
+              <div className="px-6 py-12 text-center text-stone-400 text-sm">
+                Belum ada transaksi.
+              </div>
+            )}
           </div>
         )}
 
@@ -7458,55 +7521,141 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
 
         {activeTab === 'transactions' && (
           <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden">
-            <div className="p-6 border-b border-stone-100">
-              <h3 className="text-lg font-display font-black">Riwayat Transaksi Partner</h3>
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-display font-black">Riwayat Transaksi Partner</h3>
+                <p className="text-xs text-stone-500 mt-1">Detail setoran sampah per kategori dari partner institusi</p>
+              </div>
+              <span className="text-xs font-black text-stone-400 bg-stone-50 border border-stone-200 px-3 py-1.5 rounded-xl">
+                {transactions.length} transaksi
+              </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-stone-50">
-                  <tr>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Partner</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">User</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Kategori</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Berat</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Poin</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-50">
-                  {transactions.map((tx: any) => {
-                    const partner = partners.find((p: any) => p.id === tx.partnerId);
-                    return (
-                      <tr key={tx.id} className="hover:bg-stone-50/50">
-                        <td className="px-6 py-4 text-xs font-bold text-stone-800">{partner?.name || tx.partnerName || '-'}</td>
-                        <td className="px-6 py-4 text-xs text-stone-500">{tx.userEmail || tx.userToken || '-'}</td>
-                        <td className="px-6 py-4 text-xs text-stone-500 capitalize">{tx.category || '-'}</td>
-                        <td className="px-6 py-4 text-xs text-stone-500">{tx.totalWeight || tx.weight || 0} kg</td>
-                        <td className="px-6 py-4 text-xs font-black text-emerald-600">{tx.totalPoints || 0}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
-                            tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                            tx.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                            tx.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
-                            tx.status === 'flagged_for_review' ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                            'bg-stone-100 text-stone-700 border-stone-200'
-                          }`}>{tx.status}</span>
-                        </td>
-                        <td className="px-6 py-4 text-[10px] text-stone-400">{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('id-ID') : '-'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {transactions.length === 0 && (
-                <div className="px-6 py-12 text-center text-stone-400 text-sm">
-                  Belum ada transaksi dari partner institusi ini.
-                </div>
-              )}
+
+            {/* Header kolom */}
+            <div className="hidden md:grid grid-cols-[2fr_1.5fr_2.5fr_1fr_1.2fr_1.3fr] gap-4 px-6 py-3 bg-stone-50 border-b border-stone-100">
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Bank Sampah</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Pengguna</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Setoran</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Bukti</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Tanggal</span>
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Status</span>
             </div>
+
+            <div className="divide-y divide-stone-50">
+              {transactions.map((tx: any) => {
+                const partner = partners.find((p: any) => p.id === tx.partnerId || p.id === tx.partnerUid);
+                const itemsList: {category: string; weight: number}[] =
+                  tx.items && tx.items.length > 0
+                    ? tx.items
+                    : tx.category
+                      ? [{ category: tx.category, weight: tx.totalWeight || tx.weight || 0 }]
+                      : [];
+                const totalW = tx.totalWeight || tx.weight ||
+                  itemsList.reduce((s: number, i: any) => s + (Number(i.weight) || 0), 0);
+
+                return (
+                  <div key={tx.id} className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_2.5fr_1fr_1.2fr_1.3fr] gap-4 px-6 py-5 hover:bg-stone-50/60 transition-colors items-start">
+
+                    {/* Bank Sampah */}
+                    <div>
+                      <p className="text-sm font-bold text-stone-800 leading-tight">
+                        {partner?.name || tx.partnerName || '-'}
+                      </p>
+                      {(partner?.email || tx.partnerEmail) && (
+                        <p className="text-[10px] text-stone-400 mt-0.5">
+                          {partner?.email || tx.partnerEmail}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Pengguna */}
+                    <div>
+                      <p className="text-xs font-semibold text-stone-700">
+                        {tx.userName || tx.userDisplayName || '-'}
+                      </p>
+                      <p className="text-[10px] text-stone-400 font-mono mt-0.5 truncate max-w-[140px]">
+                        {tx.userEmail || tx.userToken || ''}
+                      </p>
+                    </div>
+
+                    {/* Setoran detail */}
+                    <div>
+                      <p className="text-base font-black text-stone-900">
+                        {typeof totalW === 'number' ? totalW.toFixed(1) : totalW} kg
+                      </p>
+                      {itemsList.length > 0 ? (
+                        <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
+                          {itemsList.map((it: any) => `${it.category} (${it.weight}kg)`).join(', ')}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-stone-400 italic mt-0.5">-</p>
+                      )}
+                      <p className="text-xs font-black text-emerald-600 mt-1">
+                        +{(tx.totalPoints || 0).toLocaleString()} NP
+                      </p>
+                    </div>
+
+                    {/* Bukti foto */}
+                    <div>
+                      {tx.photoUrl ? (
+                        <button
+                          onClick={() => setSelectedPhotoPreview({
+                            image: tx.photoUrl,
+                            user: tx.userName || tx.userToken || 'User',
+                            title: 'Bukti Setoran',
+                            date: tx.createdAt ? new Date(tx.createdAt).toLocaleString('id-ID') : undefined
+                          })}
+                          className="w-12 h-12 rounded-xl overflow-hidden border border-stone-200 hover:opacity-80 transition-opacity block"
+                        >
+                          <img src={tx.photoUrl} alt="bukti" className="w-full h-full object-cover" />
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-stone-300 italic">Tanpa foto</span>
+                      )}
+                    </div>
+
+                    {/* Tanggal */}
+                    <div>
+                      <p className="text-[11px] text-stone-600 font-semibold leading-snug">
+                        {tx.createdAt
+                          ? new Date(tx.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '-'}
+                      </p>
+                      <p className="text-[10px] text-stone-400 mt-0.5">
+                        {tx.createdAt
+                          ? new Date(tx.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                          : ''}
+                      </p>
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        tx.status === 'approved'         ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        tx.status === 'pending'          ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                        tx.status === 'rejected'         ? 'bg-red-100 text-red-700 border-red-200' :
+                        tx.status === 'flagged_for_review' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                        'bg-stone-100 text-stone-700 border-stone-200'
+                      }`}>
+                        {tx.status === 'approved'          ? 'Diterima'  :
+                         tx.status === 'pending'           ? 'Menunggu'  :
+                         tx.status === 'rejected'          ? 'Ditolak'   :
+                         tx.status === 'flagged_for_review'? 'Flagged'   :
+                         tx.status || '-'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {transactions.length === 0 && (
+              <div className="px-6 py-12 text-center text-stone-400 text-sm">
+                Belum ada transaksi dari partner institusi ini.
+              </div>
+            )}
           </div>
-)}
+        )}
        </div>
        {/* Modal Preview Foto */}
        <AnimatePresence>
