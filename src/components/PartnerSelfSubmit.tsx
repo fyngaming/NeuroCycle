@@ -18,9 +18,9 @@ const PartnerSelfSubmit = ({ onClose, onSuccess }: { onClose: () => void, onSucc
     const fetchInstitutions = async () => {
       try {
         // Hanya tampilkan institusi yang sudah disetujui DAN aktif
+        // Tampilkan institusi yang statusnya 'active' (sudah diaktifkan oleh super admin)
         const q = query(
           collection(db, 'institutions'),
-          where('approvalStatus', '==', 'approved'),
           where('status', '==', 'active')
         );
         const snap = await getDocs(q);
