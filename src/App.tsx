@@ -1991,7 +1991,7 @@ const WasteBankVerify = ({
               onChange={e => setSelectedPartnerId(e.target.value)}
               className="w-full px-4 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-stone-800 outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
             >
-              <option value="manual">? Input manual (review admin)</option>
+              <option value="manual">✏️ Input manual (review admin)</option>
               {partnerList.map(p => (
                 <option key={p.id} value={p.id}>🏢 {p.name}</option>
               ))}
