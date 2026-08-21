@@ -1374,42 +1374,60 @@ function parseWasteAnalysis(text: string): WasteAnalysis {
 }
 
 async function analyzeWasteWithGemini(base64Image: string, userId?: string): Promise<WasteAnalysis> {
-  const prompt = `You are a professional waste analyzer specializing in Indonesian waste classification. Analyze this waste photo and identify the visible object accurately.
+  const prompt = `Kamu adalah sistem analisis sampah AI yang sangat akurat untuk aplikasi daur ulang di Indonesia. Tugasmu adalah mengidentifikasi sampah dari foto dengan presisi tinggi.
 
-CATEGORY DEFINITIONS (VERY IMPORTANT):
-- Residu: Sisa makanan/food waste (cooked or raw) - nasi sisa, daging, tulang ayam, sisa masak, bekas makanan, dll. ALWAYS use this for food leftovers/waste.
-- Organik: Fresh or dried organic materials - buah utuh, sayuran segar, daun, bunga, rumput, limbah taman
-- Plastik: Bottles, containers, bags, cups, toys, casing - transparent, white, or colored plastic surfaces
-- Kertas: Cardboard, paper, books, boxes - brown/beige paper texture
-- Logam: Cans, foil, utensils, nails, wires - metallic silver/gray shiny surfaces
-- Kaca: Glass bottles, cups, vases - transparent or blue/green glass
-- B3: Batteries, chargers, cables, electronics, medicine, chemicals - hazardous materials
-- Anorganik: Mixed materials that don't fit above categories
+== LANGKAH WAJIB (ikuti urutan ini) ==
 
-CRITICAL IDENTIFICATION RULES:
-1. NON-WASTE DETECTION: If the image shows a human face, selfie, person, pet, animal, clean car, furniture, wall, sky, landscape, or anything that is CLEARLY NOT WASTE, set "isNotWaste": true, "category": "Bukan Sampah", and "name": "Bukan Sampah".
-2. Food waste (sisa makanan) → ALWAYS classify as "Residu" NOT "Organik"
-3. Cooked food appearance (brown, beige, wet) → "Residu"
-4. Food leftovers, bones, meat scraps → "Residu"
-5. Plate/bowl contents from meal → "Residu"
-6. Fresh whole fruits/vegetables → "Organik"
-7. Garden waste (leaves, grass, flowers) → "Organik"
+LANGKAH 1 — IDENTIFIKASI OBJEK DOMINAN:
+Lihat gambar dengan seksama. Identifikasi SATU objek utama yang paling besar/paling mendominasi gambar. Abaikan latar belakang. Sebut nama objek tersebut secara spesifik (contoh: "Botol Plastik Air Mineral", "Kaleng Soda Aluminium", "Kardus Bekas", "Ember Plastik Merah", "Kantong Kresek", "Baterai AA").
 
-Analyze the visible materials carefully and create accurate composition percentages based on visual evidence. Return realistic disposal guide, creative upcycling ideas, tips, environmental impact, and impact stats.
+LANGKAH 2 — TENTUKAN MATERIAL UTAMA:
+Berdasarkan objek dominan tersebut, tentukan material utamanya:
+- Plastik → botol plastik, ember, kantong plastik, gelas plastik, sedotan, mainan plastik, wadah plastik, styrofoam
+- Logam → kaleng aluminium, kaleng soda, kawat, besi, seng, paku, sendok/garpu logam, kaleng makanan
+- Kertas → kardus, karton, koran, majalah, buku, tissue box, dus, amplop
+- Kaca → botol kaca, gelas kaca, guci, cermin, kaca jendela
+- B3 (Berbahaya) → baterai, charger, kabel, HP, elektronik, obat-obatan, bahan kimia, aerosol, cat
+- Organik → buah utuh segar, sayuran segar, daun, rumput, ranting, sampah kebun
+- Residu → sisa nasi, tulang ayam, makanan matang sisa, ampas kopi, kulit telur, sisa masak
+- Anorganik → campuran yang tidak masuk kategori di atas
 
-You must return ONLY the result as a JSON object with this exact structure:
+LANGKAH 3 — DETEKSI BUKAN SAMPAH:
+Jika gambar menunjukkan: wajah manusia, selfie, orang hidup, hewan peliharaan, kendaraan bersih, bangunan, langit, pemandangan alam tanpa sampah, atau benda apapun yang JELAS BUKAN sampah/barang bekas → set "isNotWaste": true.
+
+LANGKAH 4 — ANALISIS KOMPOSISI:
+Jika ada beberapa jenis material terlihat (misalnya tumpukan sampah campuran), buat komposisi dengan persentase berdasarkan apa yang TERLIHAT SECARA VISUAL. Total harus 100%.
+
+LANGKAH 5 — BUAT NAMA SPESIFIK DALAM BAHASA INDONESIA:
+"name" harus nama spesifik berdasarkan objek asli yang terlihat, dalam Bahasa Indonesia. Contoh:
+- "Botol Air Mineral Plastik" bukan "Plastik"
+- "Kaleng Minuman Aluminium" bukan "Logam"
+- "Kardus Bekas" bukan "Kertas"
+- "Tumpukan Sampah Campuran" jika memang tercampur
+- "Ember Plastik" bukan "Bucket, Pail"
+
+== ATURAN PENTING ==
+- Jangan gunakan nama bahasa Inggris untuk field "name" — WAJIB dalam Bahasa Indonesia
+- Untuk gambar tumpukan sampah campuran: pilih kategori material yang paling DOMINAN secara visual
+- Sisa makanan/bekas masak → SELALU "Residu", BUKAN "Organik"
+- Buah/sayuran SEGAR dan UTUH → "Organik"
+- accuracy harus REALISTIS: 0.75-0.95 untuk objek jelas, 0.60-0.74 untuk gambar buram/campuran
+
+Kembalikan HANYA JSON dengan struktur berikut (tanpa teks lain):
 {
-  "isNotWaste": boolean (set true ONLY if the image is NOT waste/recyclable),
-  "name": "string (Specific name of the waste or 'Bukan Sampah')",
-  "category": "Residu | Organik | Anorganik | B3 | Kertas | Plastik | Logam | Kaca | Bukan Sampah",
-  "composition": [{"material": "string", "percentage": number, "description": "string"}],
-  "disposalGuide": "string",
-  "recyclable": boolean,
-  "accuracy": number (between 0.7 and 0.99),
-  "tips": "string",
-  "environmentalImpact": "string",
-  "creativeIdeas": ["string", "string", "string"],
-  "impactStats": {"co2Saved": number, "waterSaved": number, "energySaved": number}
+  "isNotWaste": false,
+  "name": "nama spesifik objek dalam Bahasa Indonesia",
+  "category": "Plastik | Logam | Kertas | Kaca | B3 | Organik | Residu | Anorganik | Bukan Sampah",
+  "composition": [
+    {"material": "nama material dalam Bahasa Indonesia", "percentage": angka, "description": "deskripsi singkat"}
+  ],
+  "disposalGuide": "panduan pembuangan dalam Bahasa Indonesia",
+  "recyclable": true atau false,
+  "accuracy": angka antara 0.60 dan 0.95,
+  "tips": "tips pengelolaan sampah ini dalam Bahasa Indonesia",
+  "environmentalImpact": "dampak lingkungan dalam Bahasa Indonesia",
+  "creativeIdeas": ["ide kreatif 1", "ide kreatif 2", "ide kreatif 3"],
+  "impactStats": {"co2Saved": angka_kg, "waterSaved": angka_liter, "energySaved": angka_kwh}
 }`;
 
   const parts: Part[] = [
