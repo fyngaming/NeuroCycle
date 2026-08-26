@@ -6261,7 +6261,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             { id: 'users', label: 'Users' },
             { id: 'user_assignments', label: 'Kelola User' },
             { id: 'transactions', label: 'Transactions' },
-            { id: 'inst_passwords', label: '🔑 Password Institusi' },
+            { id: 'inst_passwords', label: 'Password Institusi' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
@@ -6500,6 +6500,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Password</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Institusi</th>
                     <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Owner UID</th>
+                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-50">
@@ -6512,12 +6513,107 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                           p.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                           p.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
                           p.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
+                          p.status === 'suspended' ? 'bg-stone-100 text-stone-700 border-stone-300' :
                           'bg-stone-100 text-stone-700 border-stone-200'
-                        }`}>{p.status}</span>
+                        }`}>
+                          {p.status === 'approved' ? 'Disetujui' : p.status === 'pending' ? 'Menunggu' : p.status === 'rejected' ? 'Ditolak' : p.status === 'suspended' ? 'Nonaktif' : p.status}
+                        </span>
+                        {p.suspensionReason && (
+                          <p className="text-[10px] text-stone-500 mt-1 max-w-[140px]">{p.suspensionReason}</p>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-xs font-mono font-semibold text-stone-700">{p.password || '-'}</td>
                       <td className="px-6 py-4 text-xs text-stone-600">{institutions.find((i: any) => i.id === p.institutionId)?.name || p.institutionId || '-'}</td>
                       <td className="px-6 py-4 text-[10px] font-mono text-stone-400">{p.ownerUid}</td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        {p.status === 'approved' ? (
+                          <button
+                            onClick={async () => {
+                              const reason = prompt(`Masukkan alasan penonaktifan untuk "${p.name}" (opsional):`) || 'Dinonaktifkan oleh Super Admin';
+                              try {
+                                await updateDoc(doc(db, 'partners', p.id), {
+                                  status: 'suspended',
+                                  suspendedAt: new Date().toISOString(),
+                                  suspensionReason: reason,
+                                  suspendedBy: 'super_admin'
+                                });
+                                alert(`⛔ Partner "${p.name}" berhasil dinonaktifkan.`);
+                              } catch (e) {
+                                console.error('Gagal menonaktifkan partner:', e);
+                                alert('Gagal menonaktifkan partner.');
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100 transition-all active:scale-95 shadow-sm"
+                          >
+                            Nonaktifkan
+                          </button>
+                        ) : (p.status === 'suspended' || p.status === 'rejected') ? (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await updateDoc(doc(db, 'partners', p.id), {
+                                  status: 'approved',
+                                  approvedAt: new Date().toISOString(),
+                                  approvedBy: 'super_admin',
+                                  suspendedAt: null,
+                                  suspensionReason: '',
+                                  rejectionReason: ''
+                                });
+                                alert(`✅ Partner "${p.name}" berhasil diaktifkan kembali!`);
+                              } catch (e) {
+                                console.error('Gagal mengaktifkan partner:', e);
+                                alert('Gagal mengaktifkan partner.');
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95 shadow-sm"
+                          >
+                            Aktifkan
+                          </button>
+                        ) : p.status === 'pending' ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await updateDoc(doc(db, 'partners', p.id), {
+                                    status: 'approved',
+                                    approvedAt: new Date().toISOString(),
+                                    approvedBy: 'super_admin',
+                                    suspendedAt: null,
+                                    suspensionReason: ''
+                                  });
+                                  alert(`✅ Partner "${p.name}" berhasil disetujui!`);
+                                } catch (e) {
+                                  alert('Gagal menyetujui partner.');
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95"
+                            >
+                              Aktifkan
+                            </button>
+                            <button
+                              onClick={async () => {
+                                const reason = prompt(`Masukkan alasan penolakan untuk "${p.name}":`) || 'Tidak memenuhi kriteria';
+                                try {
+                                  await updateDoc(doc(db, 'partners', p.id), {
+                                    status: 'rejected',
+                                    rejectionReason: reason,
+                                    rejectedAt: new Date().toISOString(),
+                                    rejectedBy: 'super_admin'
+                                  });
+                                  alert(`❌ Partner "${p.name}" ditolak.`);
+                                } catch (e) {
+                                  alert('Gagal menolak partner.');
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100 transition-all active:scale-95"
+                            >
+                              Tolak
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-stone-300 italic">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
