@@ -143,6 +143,8 @@ interface DepositHistoryItem {
   totalWeight: number;
   status: 'Pending' | 'Approved' | 'Rejected';
   image?: string;
+  photoUrl?: string;
+  proofImage?: string;
   location?: string;
   userEmail?: string;
   userUid?: string;
@@ -1851,6 +1853,12 @@ const WasteBankVerify = ({
           }));
           const totalWeight = itemsList.reduce((acc, curr) => acc + curr.weight, 0);
           
+          // Compress preview photo if available
+          let compressedPhoto = '';
+          if (preview) {
+            try { compressedPhoto = await compressForFirestore(preview); } catch { compressedPhoto = preview; }
+          }
+
           const txRef = doc(collection(db, 'transactions'));
           await setDoc(txRef, {
             partnerUid: selectedPartner?.id || null,
@@ -1865,7 +1873,10 @@ const WasteBankVerify = ({
             totalWeight,
             // for backwards compatibility:
             category: itemsList[0]?.category || 'campuran',
-            weight: totalWeight
+            weight: totalWeight,
+            // Bukti foto
+            photoUrl: compressedPhoto || '',
+            image: compressedPhoto || ''
           });
 
           // Also add to user's depositHistory as Pending
@@ -1876,7 +1887,8 @@ const WasteBankVerify = ({
             totalPoints: itemsList.reduce((acc, i) => acc + i.points, 0),
             totalWeight,
             status: 'Pending',
-            image: '',
+            image: compressedPhoto || '',
+            photoUrl: compressedPhoto || '',
             location: selectedPartner?.name || 'Bank Sampah Partner',
             userEmail: userData.email || '',
             userUid
@@ -3362,7 +3374,8 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
         totalPoints,
         status: tx.status || historyItem?.status || 'pending',
         date: tx.createdAt || historyItem?.date || '',
-        image: tx.photoUrl || historyItem?.image || '',
+        image: tx.photoUrl || tx.image || tx.proofImage || tx.proofPhoto || tx.photo ||
+               historyItem?.photoUrl || historyItem?.image || historyItem?.proofImage || '',
         reason: tx.rejectionReason || tx.anomalyReason || ''
       };
     })

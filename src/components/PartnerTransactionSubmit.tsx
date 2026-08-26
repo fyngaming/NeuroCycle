@@ -155,44 +155,67 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
         ? getDoc(doc(db, 'partners', partnerUid)).then(docSnap => docSnap.exists() ? docSnap.data() : null)
         : Promise.resolve(null);
 
-      const [resolvedUser, partnerData, photoUrl] = await Promise.all([userPromise, partnerPromise, compressImage(photo).then(f => uploadToImgBB(f))]);
+      const [resolvedUser, partnerData, photoUrl] = await Promise.all([
+        userPromise,
+        partnerPromise,
+        compressImage(photo).then(f => uploadToImgBB(f))
+      ]);
 
       const partnerInstitutionId = partnerData?.institutionId || null;
 
+      // Cari transaksi pending yang sudah ada (dari WasteBankVerify user)
       const existingTxSnap = await getDocs(query(
         collection(db, 'transactions'),
         where('partnerUid', '==', partnerUid || 'unverified'),
         where('userToken', '==', trimmedToken),
-        where('status', '==', txStatus)
+        where('status', '==', 'pending')
       ));
 
       let txId: string;
 
       if (!existingTxSnap.empty) {
+        // Update transaksi yang sudah ada — sertakan photoUrl
         txId = existingTxSnap.docs[0].id;
         await updateDoc(doc(db, 'transactions', txId), {
           status: txStatus,
           updatedAt: new Date().toISOString(),
           institutionId: partnerInstitutionId || null,
           partnerId: partnerUid || null,
+          // Simpan foto bukti agar terlihat di dashboard admin
+          photoUrl: photoUrl || '',
+          image: photoUrl || '',
         });
       } else {
+        // Buat transaksi baru
         txId = doc(collection(db, 'transactions')).id;
         const txDocRef = doc(db, 'transactions', txId);
         await setDoc(txDocRef, {
           partnerUid: partnerUid || 'unverified',
           partnerId: partnerUid || null,
-partnerName: partnerName || (isUnapproved ? 'Bank Sampah Belum Terdaftar' : 'Bank Sampah'),
-          userUid: resolvedUser.uid, userToken: trimmedToken,
-          category: category, weight: finalTotalWeight, items: finalItems,
-          totalWeight: finalTotalWeight, totalPoints: finalTotalPoints, photoUrl,
-          status: txStatus, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+          partnerName: partnerName || (isUnapproved ? 'Bank Sampah Belum Terdaftar' : 'Bank Sampah'),
+          userUid: resolvedUser.uid,
+          userToken: trimmedToken,
+          category: category,
+          weight: finalTotalWeight,
+          items: finalItems,
+          totalWeight: finalTotalWeight,
+          totalPoints: finalTotalPoints,
+          photoUrl: photoUrl || '',
+          image: photoUrl || '',
+          status: txStatus,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           institutionId: partnerInstitutionId
         });
       }
 
       if (isUnapproved) {
-        await setDoc(doc(db, 'adminReviews', txId), { txId, reason: 'Partner belum terdaftar', status: 'pending', createdAt: new Date().toISOString() });
+        await setDoc(doc(db, 'adminReviews', txId), {
+          txId,
+          reason: 'Partner belum terdaftar',
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
       }
 
       setSuccessInfo({
@@ -201,7 +224,9 @@ partnerName: partnerName || (isUnapproved ? 'Bank Sampah Belum Terdaftar' : 'Ban
           ? 'Bank sampah belum terdaftar. Setoran menunggu verifikasi admin.'
           : `Setoran berhasil diajukan. Total: ${finalTotalWeight} kg • ${finalTotalPoints.toLocaleString()} NP.`,
         bankName: partnerName || 'Bank Sampah',
-        items: finalItems, totalWeight: finalTotalWeight, totalPoints: finalTotalPoints
+        items: finalItems,
+        totalWeight: finalTotalWeight,
+        totalPoints: finalTotalPoints
       });
     } catch (e: any) {
       await logError({
