@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -5848,6 +5848,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [errorLogs, setErrorLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewPhoto, setPreviewPhoto] = useState<any | null>(null);
   const [showAssignAdminForm, setShowAssignAdminForm] = useState(false);
   const [assigningInstitution, setAssigningInstitution] = useState<any>(null);
   const [selectedUserEmail, setSelectedUserEmail] = useState('');
@@ -6260,7 +6261,7 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             { id: 'users', label: 'Users' },
             { id: 'user_assignments', label: 'Kelola User' },
             { id: 'transactions', label: 'Transactions' },
-            { id: 'inst_passwords', label: '? Password Institusi' },
+            { id: 'inst_passwords', label: '🔑 Password Institusi' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
@@ -6291,6 +6292,10 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2 text-center">
                   <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Disetujui</p>
                   <p className="text-xl font-black text-emerald-700">{partners.filter((p: any) => p.status === 'approved').length}</p>
+                </div>
+                <div className="bg-stone-50 border border-stone-200 rounded-2xl px-4 py-2 text-center">
+                  <p className="text-[10px] font-black text-stone-600 uppercase tracking-widest">Nonaktif</p>
+                  <p className="text-xl font-black text-stone-700">{partners.filter((p: any) => p.status === 'suspended').length}</p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-2 text-center">
                   <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Ditolak</p>
@@ -6342,12 +6347,16 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                           p.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                           p.status === 'pending'  ? 'bg-amber-100 text-amber-700 border-amber-200' :
                           p.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
+                          p.status === 'suspended' ? 'bg-stone-100 text-stone-700 border-stone-300' :
                           'bg-stone-100 text-stone-700 border-stone-200'
                         }`}>
-                          {p.status === 'approved' ? 'Disetujui' : p.status === 'pending' ? 'Menunggu' : p.status === 'rejected' ? 'Ditolak' : p.status}
+                          {p.status === 'approved' ? 'Disetujui' : p.status === 'pending' ? 'Menunggu' : p.status === 'rejected' ? 'Ditolak' : p.status === 'suspended' ? 'Nonaktif' : p.status}
                         </span>
                         {p.rejectionReason && (
                           <p className="text-[10px] text-red-500 mt-1 max-w-[140px]">{p.rejectionReason}</p>
+                        )}
+                        {p.suspensionReason && (
+                          <p className="text-[10px] text-stone-500 mt-1 max-w-[140px]">{p.suspensionReason}</p>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -6359,7 +6368,9 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                   await updateDoc(doc(db, 'partners', p.id), {
                                     status: 'approved',
                                     approvedAt: new Date().toISOString(),
-                                    approvedBy: 'super_admin'
+                                    approvedBy: 'super_admin',
+                                    suspendedAt: null,
+                                    suspensionReason: ''
                                   });
                                   const instAdmin = users.find((u: any) =>
                                     u.role === 'institution_admin' && u.institutionId === p.institutionId
@@ -6408,24 +6419,53 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                               Tolak
                             </button>
                           </div>
-                        ) : p.status === 'rejected' ? (
-                          <button
-                            onClick={async () => {
-                              try {
-                                await updateDoc(doc(db, 'partners', p.id), {
-                                  status: 'pending',
-                                  rejectionReason: '',
-                                  rejectedAt: null
-                                });
-                                alert('Status partner direset ke pending.');
-                              } catch (e) {
-                                alert('Gagal mereset status.');
-                              }
-                            }}
-                            className="px-3 py-2 bg-stone-50 text-stone-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-stone-200 hover:bg-stone-100 transition-all"
-                          >
-                            Reset
-                          </button>
+                        ) : p.status === 'approved' ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={async () => {
+                                const reason = prompt(`Masukkan alasan penonaktifan untuk "${p.name}" (opsional):`) || 'Dinonaktifkan oleh Super Admin';
+                                try {
+                                  await updateDoc(doc(db, 'partners', p.id), {
+                                    status: 'suspended',
+                                    suspendedAt: new Date().toISOString(),
+                                    suspensionReason: reason,
+                                    suspendedBy: 'super_admin'
+                                  });
+                                  alert(`⛔ Partner "${p.name}" berhasil dinonaktifkan.`);
+                                } catch (e) {
+                                  console.error('Gagal menonaktifkan partner:', e);
+                                  alert('Gagal menonaktifkan partner.');
+                                }
+                              }}
+                              className="px-3 py-2 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100 transition-all active:scale-95"
+                            >
+                              Nonaktifkan
+                            </button>
+                          </div>
+                        ) : (p.status === 'suspended' || p.status === 'rejected') ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await updateDoc(doc(db, 'partners', p.id), {
+                                    status: 'approved',
+                                    approvedAt: new Date().toISOString(),
+                                    approvedBy: 'super_admin',
+                                    suspendedAt: null,
+                                    suspensionReason: '',
+                                    rejectionReason: ''
+                                  });
+                                  alert(`✅ Partner "${p.name}" berhasil diaktifkan kembali!`);
+                                } catch (e) {
+                                  console.error('Gagal mengaktifkan partner:', e);
+                                  alert('Gagal mengaktifkan partner.');
+                                }
+                              }}
+                              className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95"
+                            >
+                              Aktifkan
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-xs text-stone-300 italic">Sudah diproses</span>
                         )}
@@ -6616,16 +6656,47 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
                     {/* Bukti foto */}
                     <div>
-                      {tx.photoUrl ? (
-                        <img
-                          src={tx.photoUrl}
-                          alt="bukti"
-                          className="w-12 h-12 rounded-xl object-cover border border-stone-200 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => window.open(tx.photoUrl, '_blank')}
-                        />
-                      ) : (
-                        <span className="text-[10px] text-stone-300 italic">Tanpa foto</span>
-                      )}
+                      {(() => {
+                        const rawPhoto = tx.photoUrl || tx.image || tx.proofImage || tx.proofPhoto || tx.photo;
+                        const validPhoto = rawPhoto ? normalizePhotoUrl(rawPhoto) : null;
+                        return validPhoto ? (
+                          <div className="flex flex-col items-start gap-1">
+                            <img
+                              src={validPhoto}
+                              alt="bukti"
+                              className="w-12 h-12 rounded-xl object-cover border border-stone-200 cursor-pointer hover:scale-105 hover:shadow-md transition-all"
+                              onClick={() => setPreviewPhoto({
+                                url: validPhoto,
+                                partnerName: tx.partnerName || '-',
+                                userName: tx.userName || tx.userDisplayName || '-',
+                                weight: totalW,
+                                items: itemsList,
+                                points: tx.totalPoints || 0,
+                                date: tx.createdAt ? new Date(tx.createdAt).toLocaleString('id-ID') : '-',
+                                status: tx.status
+                              })}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPreviewPhoto({
+                                url: validPhoto,
+                                partnerName: tx.partnerName || '-',
+                                userName: tx.userName || tx.userDisplayName || '-',
+                                weight: totalW,
+                                items: itemsList,
+                                points: tx.totalPoints || 0,
+                                date: tx.createdAt ? new Date(tx.createdAt).toLocaleString('id-ID') : '-',
+                                status: tx.status
+                              })}
+                              className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 underline cursor-pointer"
+                            >
+                              Lihat Bukti
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-stone-300 italic">Tanpa foto</span>
+                        );
+                      })()}
                     </div>
 
                     {/* Tanggal */}
@@ -6826,6 +6897,67 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   Belum ada institusi terdaftar.
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal Scan / Detail Bukti Setoran Sampah */}
+        {previewPhoto && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn" onClick={() => setPreviewPhoto(null)}>
+            <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-stone-100" onClick={(e) => e.stopPropagation()}>
+              <div className="p-4 border-b border-stone-100 flex items-center justify-between">
+                <div>
+                  <h4 className="font-display font-black text-stone-800 text-sm">Bukti Setoran Sampah</h4>
+                  <p className="text-[11px] text-stone-400">{previewPhoto.partnerName} • {previewPhoto.userName}</p>
+                </div>
+                <button
+                  onClick={() => setPreviewPhoto(null)}
+                  className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 font-bold text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-4 bg-stone-900 flex items-center justify-center min-h-[260px] max-h-[420px] overflow-hidden">
+                <img
+                  src={previewPhoto.url}
+                  alt="Bukti Setoran"
+                  className="max-h-[380px] w-auto max-w-full rounded-xl object-contain shadow-lg"
+                />
+              </div>
+              <div className="p-4 bg-stone-50 text-xs space-y-2">
+                <div className="flex justify-between items-center text-stone-600">
+                  <span>Total Berat:</span>
+                  <span className="font-black text-stone-900">{typeof previewPhoto.weight === 'number' ? previewPhoto.weight.toFixed(1) : previewPhoto.weight} kg</span>
+                </div>
+                {previewPhoto.items && previewPhoto.items.length > 0 && (
+                  <div className="flex justify-between items-start text-stone-500 text-[11px]">
+                    <span>Rincian:</span>
+                    <span className="text-right font-medium">{previewPhoto.items.map((it: any) => `${it.category} (${it.weight}kg)`).join(', ')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center text-stone-600">
+                  <span>Poin Diperoleh:</span>
+                  <span className="font-black text-emerald-600">+{previewPhoto.points.toLocaleString()} NP</span>
+                </div>
+                <div className="flex justify-between items-center text-stone-400 text-[10px] pt-1 border-t border-stone-200/60">
+                  <span>Waktu Transaksi:</span>
+                  <span>{previewPhoto.date}</span>
+                </div>
+              </div>
+              <div className="p-3 bg-white border-t border-stone-100 flex justify-end gap-2">
+                <button
+                  onClick={() => window.open(previewPhoto.url, '_blank')}
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-all"
+                >
+                  Buka Gambar Asli ↗
+                </button>
+                <button
+                  onClick={() => setPreviewPhoto(null)}
+                  className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded-xl transition-all"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         )}
