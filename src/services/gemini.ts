@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, Part } from "@google/generative-ai";
+import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
 import * as mobilenet from "@tensorflow-models/mobilenet";
 import * as tf from "@tensorflow/tfjs";
 import '@tensorflow/tfjs-backend-webgl';
@@ -11,6 +11,31 @@ const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== 'undef
 
 const genAI = new GoogleGenerativeAI(apiKey);
 export { genAI };
+
+// Fungsi untuk memverifikasi label sampah menggunakan Gemini
+export async function verifyWasteLabel(base64Image: string, detectedLabel: string): Promise<string | null> {
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    const prompt = `Apakah label "${detectedLabel}" tepat untuk gambar ini? Berikan nama kategori sampah yang paling tepat dalam Bahasa Indonesia, satu kata saja. Jika tidak cocok, beri label yang lebih sesuai.`;
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: cleanBase64,
+          mimeType: 'image/jpeg',
+        },
+      },
+      prompt,
+    ]);
+    const text = result.response?.text?.() ?? '';
+    const refined = text.trim();
+    return refined || null;
+  } catch (e) {
+    console.error('Gemini verification error:', e);
+    return null;
+  }
+}
+
 
 const DEBUG_WASTE = (import.meta.env && import.meta.env.VITE_WASTE_DEBUG === 'true') || (typeof process !== 'undefined' && process.env.VITE_WASTE_DEBUG === 'true');
 

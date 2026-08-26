@@ -1,11 +1,13 @@
 # Stage 1: Build
-# Updated: 2026-06-19T07:15:00 - force rebuild with gemini-2.5-flash-image
 FROM node:20-alpine AS builder
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm ci
+
 COPY . .
 
+# Build Arguments & Environment Variables
 ARG VITE_GEMINI_API_KEY
 ARG VITE_FIREBASE_API_KEY
 ARG VITE_FIREBASE_AUTH_DOMAIN
@@ -17,6 +19,10 @@ ARG VITE_ADMIN_USER
 ARG VITE_ADMIN_PASS
 ARG VITE_APP_URL
 ARG VITE_IMGBB_API_KEY
+ARG GEMINI_API_KEY
+ARG GOOGLE_MAPS_PLATFORM_KEY
+ARG GOOGLE_MAPS_PLATFORM
+
 ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
 ENV VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY
 ENV VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN
@@ -28,12 +34,20 @@ ENV VITE_ADMIN_USER=$VITE_ADMIN_USER
 ENV VITE_ADMIN_PASS=$VITE_ADMIN_PASS
 ENV VITE_APP_URL=$VITE_APP_URL
 ENV VITE_IMGBB_API_KEY=$VITE_IMGBB_API_KEY
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
+ENV GOOGLE_MAPS_PLATFORM_KEY=$GOOGLE_MAPS_PLATFORM_KEY
+ENV GOOGLE_MAPS_PLATFORM=$GOOGLE_MAPS_PLATFORM
 
 RUN npm run build
 
-# Stage 2: Serve dengan nginx
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+# Stage 2: Serve
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+RUN npm install -g serve
+
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "dist", "-l", "3000"]

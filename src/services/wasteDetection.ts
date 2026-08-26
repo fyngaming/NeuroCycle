@@ -21,12 +21,17 @@ export interface WasteDetectionResult {
 
 const MODEL_PATH = '/models/trash_detector.onnx';
 // Use 320 instead of 640 to reduce memory usage by 4x (avoid OOM crash)
-const INPUT_SIZE = 320;
-const CONFIDENCE_THRESHOLD = 0.30;
-const MIN_QUALITY_CONFIDENCE = 0.40;
-const MAX_SAME_CLASS_RATIO = 1.5;
-const IOU_THRESHOLD = 0.45;
-const LETTERBOX_VALUE = 128;
+// Use 640 for higher resolution detection (more detail)
+const INPUT_SIZE = 640;
+// Lower confidence threshold to capture more subtle items (increase recall)
+const CONFIDENCE_THRESHOLD = 0.15;
+// Slightly higher IoU to reduce overlapping boxes merging
+const IOU_THRESHOLD = 0.55;
+// Allow larger ratio before marking low confidence
+const MIN_QUALITY_CONFIDENCE = 0.0; // Disabled low‑quality filter
+const MAX_SAME_CLASS_RATIO = 2.0; // keep higher to avoid false low‑confidence
+
+const LETTERBOX_VALUE = 114;
 
 const WASTE_CLASSES: string[] = [
   'plastic',
@@ -51,18 +56,27 @@ let sessionPromise: Promise<ort.InferenceSession> | null = null;
 let modelLoadError: string | null = null;
 
 async function getSession(): Promise<ort.InferenceSession> {
-  // Return cached session immediately if available
+  // Return cached session
   if (session) return session;
 
-  // If already loading, wait for it
+  // If loading, wait for it
   if (sessionPromise) return sessionPromise;
 
-  // Configure ONNX runtime for minimal memory usage
+  // Configure ONNX runtime: try WebGL first for GPU acceleration, fallback to WASM
+  const providers: { name: string }[] = [];
+  if ((ort as any).env && (ort as any).env.webgpu && (ort as any).env.webgpu.isSupported) {
+    providers.push({ name: 'webgpu' }); // WebGPU if supported
+  } else if (typeof WebGLRenderingContext !== 'undefined') {
+    providers.push({ name: 'webgl' }); // WebGL fallback
+  }
+  // Always include WASM as final fallback
+  providers.push({ name: 'wasm' });
+
   ort.env.wasm.numThreads = 1;
   ort.env.wasm.simd = true;
 
   sessionPromise = ort.InferenceSession.create(MODEL_PATH, {
-    executionProviders: ['wasm'],
+    executionProviders: providers.map(p => p.name),
     graphOptimizationLevel: 'basic',
     enableCpuMemArena: false,
     enableMemPattern: false,
@@ -72,7 +86,7 @@ async function getSession(): Promise<ort.InferenceSession> {
     return sess;
   }).catch(err => {
     modelLoadError = err instanceof Error ? err.message : String(err);
-    sessionPromise = null; // allow retry
+    sessionPromise = null;
     throw err;
   });
 
@@ -202,6 +216,7 @@ function getClassName(classIdx: number): string {
   return classIdx < WASTE_CLASSES.length ? WASTE_CLASSES[classIdx] : 'trash';
 }
 
+import { verifyWasteLabel } from "./gemini";
 export async function detectWasteWithONNX(
   base64Image: string
 ): Promise<WasteDetectionResult> {
@@ -273,6 +288,34 @@ export async function detectWasteWithONNX(
     const isUncertain = bestRatio > MAX_SAME_CLASS_RATIO && wasteDetections.length > 1;
     const isLowQuality = best.confidence < MIN_QUALITY_CONFIDENCE;
 
+    // Jika confidence rendah, gunakan Gemini untuk verifikasi label
+    let finalLabel = template.label;
+    if (best.confidence < 0.6) {
+      try {
+        const refined = await verifyWasteLabel(base64Image, best.label);
+        if (refined && refined !== best.label) {
+          const refinedTemplate = CLASS_TO_TEMPLATE[refined.toLowerCase()] || { templateKey: 'mixed', label: refined };
+          finalLabel = refinedTemplate.label;
+          const newTemplateKey = refinedTemplate.templateKey;
+          return {
+            isWaste: true,
+            message: `Sampah terdeteksi: ${finalLabel} (${(best.confidence * 100).toFixed(1)}%)`,
+            callback: isLowQuality || isUncertain ? 'low_confidence' : 'sampah_terdeteksi',
+            modelLoaded: true,
+            detections: wasteDetections,
+            primaryWaste: {
+              label: finalLabel,
+              templateKey: newTemplateKey,
+              confidence: best.confidence,
+            },
+          };
+        }
+      } catch (e) {
+        console.error('Gemini verification failed:', e);
+      }
+    }
+
+    // fallback ke hasil ONNX
     return {
       isWaste: true,
       message: `Sampah terdeteksi: ${template.label} (${(best.confidence * 100).toFixed(1)}%)`,
