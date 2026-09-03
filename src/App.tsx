@@ -5656,7 +5656,7 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
     setInput('');
     setLoading(true);
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
       const result = await model.generateContent(buildPrompt(text));
       const rawText = result.response.text().trim();
       const botText = rawText || 'Maaf, saya belum bisa menjawab dengan jelas. Coba tanyakan seputar fitur NeuroCycle seperti setor sampah, klaim hadiah, poin, atau flagged transaction.';

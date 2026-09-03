@@ -15,7 +15,7 @@ export { genAI };
 // Fungsi untuk memverifikasi label sampah menggunakan Gemini
 export async function verifyWasteLabel(base64Image: string, detectedLabel: string): Promise<string | null> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
     const prompt = `Apakah label "${detectedLabel}" tepat untuk gambar ini? Berikan nama kategori sampah yang paling tepat dalam Bahasa Indonesia, satu kata saja. Jika tidak cocok, beri label yang lebih sesuai.`;
     const result = await model.generateContent([
@@ -62,9 +62,10 @@ export interface WasteAnalysis {
 }
 
 const IMAGE_ANALYSIS_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-2.5-pro",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.7-flash",
+  "gemini-3.8-flash",
 ];
 
 let localVisionModelPromise: Promise<any> | null = null;
@@ -234,6 +235,8 @@ const ID_LABEL_MAP: Record<string, string> = {
   'piala': 'Piala',
   'mahkota': 'Mahkota',
   'topeng': 'Topeng',
+  'oxygen mask': 'Sampah Plastik',
+  'mask': 'Sampah Medis/Plastik',
   'helm': 'Helm',
   'syal': 'Syal',
   'sarung tangan': 'Sarung Tangan',
@@ -662,6 +665,8 @@ const COCO_CLASS_TO_WASTE: Record<string, { templateKey: keyof typeof TEMPLATES;
 // Direct mapping for common labels/keywords to reduce ambiguity
 const DIRECT_LABEL_MAP: Record<string, keyof typeof TEMPLATES> = {
   // Plastic
+  'oxygen mask': 'plastic',
+  'mask': 'plastic',
   'plastic bag': 'plastic',
   'botol plastik': 'plastic',
   'bottle': 'plastic',
