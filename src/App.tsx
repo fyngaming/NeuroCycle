@@ -7910,9 +7910,86 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
     setState('main');
   };
 
+  const initUserData = async (currentUser: any) => {
+    if (authHandledRef.current) return;
+    authHandledRef.current = true;
+
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      const snapOnce = await getDoc(userRef);
+
+      if (snapOnce.exists()) {
+        const data = snapOnce.data() as UserData;
+        if (data.isBanned) {
+          alert("Akun Anda telah ditangguhkan oleh Admin karena pelanggaran kebijakan.");
+          await signOut(auth);
+          authHandledRef.current = false;
+          setState('login');
+          setIsInitializing(false);
+          return;
+        }
+
+        let updatedData = { ...data };
+        let hasChanges = false;
+        if (!data.qrToken) {
+          updatedData.qrToken = Math.random().toString(36).substr(2, 9);
+          hasChanges = true;
+        }
+        if (hasChanges) {
+          await setDoc(userRef, updatedData, { merge: true });
+        }
+
+        setUserData({
+          ...updatedData,
+          email: currentUser.email || updatedData.email || '',
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || updatedData.displayName || currentUser.email?.split('@')[0] || 'User',
+          notifications: updatedData.notifications || []
+        });
+
+        const todayStr = new Date().toDateString();
+        const lastLoginStr = updatedData.lastLogin || '';
+        const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+        if (lastLoginStr !== todayStr) {
+          const newStreak = lastLoginStr === yesterdayStr ? (updatedData.streak || 1) + 1 : 1;
+          const userRefStreak = doc(db, 'users', currentUser.uid);
+          setDoc(userRefStreak, { streak: newStreak, lastLogin: todayStr }, { merge: true });
+        }
+
+        setState('welcome');
+        setIsInitializing(false);
+      } else {
+        const initialData: UserData = {
+          ...userData,
+          uid: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          role: 'user',
+          level: 'Pemula',
+          qrToken: Math.random().toString(36).substr(2, 9),
+          isBanned: false,
+          notifications: []
+        };
+        await setDoc(userRef, initialData);
+        setUserData(initialData);
+        setState('welcome');
+        setIsInitializing(false);
+      }
+    } catch (err) {
+      console.error("initUserData error:", err);
+      authHandledRef.current = false;
+      setIsInitializing(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      authHandledRef.current = false;
+      const res = await signInWithPopup(auth, googleProvider);
+      if (res?.user) {
+        setUser(res.user);
+        await initUserData(res.user);
+      }
     } catch (error: any) {
       console.error("Login failed:", error?.code, error?.message);
       alert("Gagal login dengan Google. Error: " + (error?.code || error?.message || 'Unknown'));
@@ -8117,6 +8194,12 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
   };
 
   const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Sign out error", e);
+    }
+    setUser(null);
     authHandledRef.current = false;
     setInstAdminId(null);
     setState('login');
@@ -8138,81 +8221,12 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
           unsubscribeSnapshot();
           unsubscribeSnapshot = null;
         }
-        const userRef = doc(db, 'users', currentUser.uid);
 
-        const snapOnce = await getDoc(userRef);
-        if (snapOnce.exists()) {
-          const data = snapOnce.data() as UserData;
-          
-          if (stateRef.current === 'login' && !authHandledRef.current) {
-            authHandledRef.current = true;
-            
-            if (data.isBanned) {
-              alert("Akun Anda telah ditangguhkan oleh Admin karena pelanggaran kebijakan.");
-              await signOut(auth);
-              setState('login');
-              setIsInitializing(false);
-              return;
-            }
-
-            let updatedData = { ...data };
-            let hasChanges = false;
-
-            if (!data.qrToken) {
-              updatedData.qrToken = Math.random().toString(36).substr(2, 9);
-              hasChanges = true;
-            }
-
-            if (hasChanges) {
-              await setDoc(userRef, updatedData, { merge: true });
-            }
-
-            setUserData({
-              ...updatedData,
-              email: currentUser.email || updatedData.email || '',
-              uid: currentUser.uid,
-              displayName: currentUser.displayName || updatedData.displayName || currentUser.email?.split('@')[0] || 'User',
-              notifications: updatedData.notifications || []
-            });
-
-            const todayStr = new Date().toDateString();
-            const lastLoginStr = updatedData.lastLogin || '';
-            const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
-            if (lastLoginStr !== todayStr) {
-              const newStreak = lastLoginStr === yesterdayStr ? (updatedData.streak || 1) + 1 : 1;
-              const userRefStreak = doc(db, 'users', currentUser.uid);
-              setDoc(userRefStreak, { streak: newStreak, lastLogin: todayStr }, { merge: true });
-            }
-
-            const isReturningUser = !!(updatedData.scanHistory?.length || updatedData.depositHistory?.length || updatedData.claimHistory?.length || updatedData.points > 0 || updatedData.streak > 1);
-
-            if (!updatedData.institutionId && !isReturningUser) {
-              setState('welcome');
-            } else {
-              setState('welcome');
-            }
-            setIsInitializing(false);
-          }
-        } else {
-          if (stateRef.current === 'login' && !authHandledRef.current) {
-            authHandledRef.current = true;
-            const initialData: UserData = {
-              ...userData,
-              uid: currentUser.uid,
-              email: currentUser.email || '',
-              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-              role: 'user',
-              qrToken: Math.random().toString(36).substr(2, 9),
-              isBanned: false,
-              notifications: []
-            };
-            await setDoc(userRef, initialData);
-            setUserData(initialData);
-            setState('welcome');
-            setIsInitializing(false);
-          }
+        if (stateRef.current === 'login' || !authHandledRef.current) {
+          await initUserData(currentUser);
         }
 
+        const userRef = doc(db, 'users', currentUser.uid);
         unsubscribeSnapshot = onSnapshot(userRef, (docSnap) => {
           if (!docSnap.exists()) return;
           
@@ -8251,6 +8265,8 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
       } else {
         if (unsubscribeSnapshot) unsubscribeSnapshot();
         unsubscribeSnapshot = null;
+        authHandledRef.current = false;
+        setUser(null);
         setState('login');
         setIsInitializing(false);
       }
