@@ -5854,7 +5854,7 @@ const ReadingTimer = ({
 };
 
 const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
-  const [activeTab, setActiveTab] = useState<'institutions' | 'partners' | 'users' | 'user_assignments' | 'transactions' | 'error_logs' | 'inst_passwords' | 'partner_approvals'>('institutions');
+  const [activeTab, setActiveTab] = useState<'institutions' | 'partners' | 'users' | 'user_assignments' | 'transactions' | 'error_logs' | 'inst_passwords'>('institutions');
   const [institutions, setInstitutions] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -6071,7 +6071,30 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           </div>
         )}
 
-{activeTab === 'institutions' && (
+        {/* Tab Navigation Menu (Selalu berada di atas) */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {[
+            { id: 'institutions', label: 'Institutions' },
+            { id: 'partners', label: 'Partners' },
+            { id: 'users', label: 'Users' },
+            { id: 'user_assignments', label: 'Kelola User' },
+            { id: 'transactions', label: 'Transactions' },
+            { id: 'error_logs', label: 'Error Logs' },
+            { id: 'inst_passwords', label: 'Password Institusi' },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
+              {tab.label}
+              {tab.id === 'error_logs' && stats.totalErrors > 0 && (
+                <span className="ml-1.5 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                  {stats.totalErrors}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'institutions' && (
 <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden">
             <div className="p-6 border-b border-stone-100">
               <h3 className="text-lg font-display font-black">Daftar Institusi</h3>
@@ -6266,238 +6289,6 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           </div>
         )}
 
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {[
-            { id: 'institutions', label: 'Institutions' },
-            { id: 'partners', label: 'Partners' },
-            { id: 'partner_approvals', label: '✅ Persetujuan Partner' },
-            { id: 'users', label: 'Users' },
-            { id: 'user_assignments', label: 'Kelola User' },
-            { id: 'transactions', label: 'Transactions' },
-            { id: 'inst_passwords', label: 'Password Institusi' },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
-              {tab.label}
-              {tab.id === 'partner_approvals' && partners.filter((p: any) => p.status === 'pending').length > 0 && (
-                <span className="ml-1.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
-                  {partners.filter((p: any) => p.status === 'pending').length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === 'partner_approvals' && (
-          <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden">
-            <div className="p-6 border-b border-stone-100 flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <h3 className="text-lg font-display font-black">Persetujuan Partner</h3>
-                <p className="text-xs text-stone-500 mt-1">
-                  Partner yang mengisi form pendaftaran dan menunggu persetujuan Super Admin.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2 text-center">
-                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Menunggu</p>
-                  <p className="text-xl font-black text-amber-700">{partners.filter((p: any) => p.status === 'pending').length}</p>
-                </div>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2 text-center">
-                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Disetujui</p>
-                  <p className="text-xl font-black text-emerald-700">{partners.filter((p: any) => p.status === 'approved').length}</p>
-                </div>
-                <div className="bg-stone-50 border border-stone-200 rounded-2xl px-4 py-2 text-center">
-                  <p className="text-[10px] font-black text-stone-600 uppercase tracking-widest">Nonaktif</p>
-                  <p className="text-xl font-black text-stone-700">{partners.filter((p: any) => p.status === 'suspended').length}</p>
-                </div>
-                <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-2 text-center">
-                  <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Ditolak</p>
-                  <p className="text-xl font-black text-red-700">{partners.filter((p: any) => p.status === 'rejected').length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-stone-50">
-                  <tr>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Nama Partner</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Email</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Telepon</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Institusi</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Tanggal Daftar</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase">Status</th>
-                    <th className="px-6 py-3 text-[10px] font-black text-stone-400 uppercase text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-50">
-                  {partners
-                    .slice()
-                    .sort((a: any, b: any) => {
-                      if (a.status === 'pending' && b.status !== 'pending') return -1;
-                      if (a.status !== 'pending' && b.status === 'pending') return 1;
-                      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-                    })
-                    .map((p: any) => (
-                    <tr key={p.id} className="hover:bg-stone-50/50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-bold text-stone-800">{p.name}</p>
-                          {p.address && <p className="text-[10px] text-stone-400 mt-0.5 truncate max-w-[180px]">{p.address}</p>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-stone-500">{p.email || '-'}</td>
-                      <td className="px-6 py-4 text-xs text-stone-500">{p.phone || '-'}</td>
-                      <td className="px-6 py-4 text-xs font-semibold text-stone-700">
-                        {institutions.find((i: any) => i.id === p.institutionId)?.name || (
-                          <span className="text-stone-300 italic">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-stone-400">
-                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${
-                          p.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                          p.status === 'pending'  ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                          p.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
-                          p.status === 'suspended' ? 'bg-stone-100 text-stone-700 border-stone-300' :
-                          'bg-stone-100 text-stone-700 border-stone-200'
-                        }`}>
-                          {p.status === 'approved' ? 'Disetujui' : p.status === 'pending' ? 'Menunggu' : p.status === 'rejected' ? 'Ditolak' : p.status === 'suspended' ? 'Nonaktif' : p.status}
-                        </span>
-                        {p.rejectionReason && (
-                          <p className="text-[10px] text-red-500 mt-1 max-w-[140px]">{p.rejectionReason}</p>
-                        )}
-                        {p.suspensionReason && (
-                          <p className="text-[10px] text-stone-500 mt-1 max-w-[140px]">{p.suspensionReason}</p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {p.status === 'pending' ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await updateDoc(doc(db, 'partners', p.id), {
-                                    status: 'approved',
-                                    approvedAt: new Date().toISOString(),
-                                    approvedBy: 'super_admin',
-                                    suspendedAt: null,
-                                    suspensionReason: ''
-                                  });
-                                  const instAdmin = users.find((u: any) =>
-                                    u.role === 'institution_admin' && u.institutionId === p.institutionId
-                                  );
-                                  if (instAdmin) {
-                                    const notifs = [...(instAdmin.notifications || [])];
-                                    notifs.unshift({
-                                      id: Math.random().toString(36).substr(2, 9),
-                                      title: '✅ Partner Disetujui',
-                                      message: `Partner "${p.name}" telah disetujui oleh Super Admin dan sekarang dapat login ke sistem.`,
-                                      date: new Date().toLocaleString('id-ID'),
-                                      type: 'success',
-                                      isRead: false
-                                    });
-                                    await updateDoc(doc(db, 'users', instAdmin.id), { notifications: notifs });
-                                  }
-                                  alert(`✅ Partner "${p.name}" berhasil disetujui! Partner sekarang dapat login.`);
-                                } catch (e) {
-                                  console.error('Gagal approve partner:', e);
-                                  alert('Gagal menyetujui partner.');
-                                }
-                              }}
-                              className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={async () => {
-                                const reason = prompt(`Masukkan alasan penolakan untuk "${p.name}":`);
-                                if (reason === null) return;
-                                try {
-                                  await updateDoc(doc(db, 'partners', p.id), {
-                                    status: 'rejected',
-                                    rejectionReason: reason || 'Tidak memenuhi kriteria',
-                                    rejectedAt: new Date().toISOString(),
-                                    rejectedBy: 'super_admin'
-                                  });
-                                  alert(`❌ Partner "${p.name}" telah ditolak.`);
-                                } catch (e) {
-                                  console.error('Gagal reject partner:', e);
-                                  alert('Gagal menolak partner.');
-                                }
-                              }}
-                              className="px-3 py-2 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100 transition-all active:scale-95"
-                            >
-                              Tolak
-                            </button>
-                          </div>
-                        ) : p.status === 'approved' ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={async () => {
-                                const reason = prompt(`Masukkan alasan penonaktifan untuk "${p.name}" (opsional):`) || 'Dinonaktifkan oleh Super Admin';
-                                try {
-                                  await updateDoc(doc(db, 'partners', p.id), {
-                                    status: 'suspended',
-                                    suspendedAt: new Date().toISOString(),
-                                    suspensionReason: reason,
-                                    suspendedBy: 'super_admin'
-                                  });
-                                  alert(`⛔ Partner "${p.name}" berhasil dinonaktifkan.`);
-                                } catch (e) {
-                                  console.error('Gagal menonaktifkan partner:', e);
-                                  alert('Gagal menonaktifkan partner.');
-                                }
-                              }}
-                              className="px-3 py-2 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100 transition-all active:scale-95"
-                            >
-                              Nonaktifkan
-                            </button>
-                          </div>
-                        ) : (p.status === 'suspended' || p.status === 'rejected') ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await updateDoc(doc(db, 'partners', p.id), {
-                                    status: 'approved',
-                                    approvedAt: new Date().toISOString(),
-                                    approvedBy: 'super_admin',
-                                    suspendedAt: null,
-                                    suspensionReason: '',
-                                    rejectionReason: ''
-                                  });
-                                  alert(`✅ Partner "${p.name}" berhasil diaktifkan kembali!`);
-                                } catch (e) {
-                                  console.error('Gagal mengaktifkan partner:', e);
-                                  alert('Gagal mengaktifkan partner.');
-                                }
-                              }}
-                              className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95"
-                            >
-                              Aktifkan
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-stone-300 italic">Sudah diproses</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {partners.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-stone-400 text-sm">
-                        Belum ada partner yang mendaftar.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
         {activeTab === 'partners' && (
           <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden">
             <div className="p-6 border-b border-stone-100">
@@ -6583,46 +6374,9 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                             Aktifkan
                           </button>
                         ) : p.status === 'pending' ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await updateDoc(doc(db, 'partners', p.id), {
-                                    status: 'approved',
-                                    approvedAt: new Date().toISOString(),
-                                    approvedBy: 'super_admin',
-                                    suspendedAt: null,
-                                    suspensionReason: ''
-                                  });
-                                  alert(`✅ Partner "${p.name}" berhasil disetujui!`);
-                                } catch (e) {
-                                  alert('Gagal menyetujui partner.');
-                                }
-                              }}
-                              className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95"
-                            >
-                              Aktifkan
-                            </button>
-                            <button
-                              onClick={async () => {
-                                const reason = prompt(`Masukkan alasan penolakan untuk "${p.name}":`) || 'Tidak memenuhi kriteria';
-                                try {
-                                  await updateDoc(doc(db, 'partners', p.id), {
-                                    status: 'rejected',
-                                    rejectionReason: reason,
-                                    rejectedAt: new Date().toISOString(),
-                                    rejectedBy: 'super_admin'
-                                  });
-                                  alert(`❌ Partner "${p.name}" ditolak.`);
-                                } catch (e) {
-                                  alert('Gagal menolak partner.');
-                                }
-                              }}
-                              className="px-3 py-1.5 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 hover:bg-red-100 transition-all active:scale-95"
-                            >
-                              Tolak
-                            </button>
-                          </div>
+                          <span className="text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                            Menunggu Persetujuan Institusi
+                          </span>
                         ) : (
                           <span className="text-xs text-stone-300 italic">-</span>
                         )}
@@ -6728,6 +6482,14 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
             <div className="divide-y divide-stone-50">
               {transactions.slice(0, 100).map((tx: any) => {
+                const matchedUser = users.find((u: any) =>
+                  (u.qrToken && (u.qrToken === tx.userToken || u.qrToken === tx.userUid)) ||
+                  (u.uid && (u.uid === tx.userUid || u.uid === tx.userToken)) ||
+                  (u.email && tx.userEmail && u.email.toLowerCase() === tx.userEmail.toLowerCase())
+                );
+                const userEmail = tx.userEmail || matchedUser?.email || '';
+                const userName = tx.userName || tx.userDisplayName || matchedUser?.displayName || '';
+
                 const itemsList: {category: string; weight: number}[] = tx.items && tx.items.length > 0
                   ? tx.items
                   : tx.category
@@ -6746,8 +6508,15 @@ const SuperAdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
                     {/* User */}
                     <div>
-                      <p className="text-xs font-semibold text-stone-700">{tx.userName || tx.userDisplayName || '-'}</p>
-                      <p className="text-[10px] text-stone-400 font-mono mt-0.5 truncate max-w-[140px]">{tx.userEmail || tx.userToken || ''}</p>
+                      <p className="text-xs font-bold text-stone-800 leading-tight break-all">
+                        {userEmail || userName || (tx.userToken ? `Token: ${tx.userToken}` : '-')}
+                      </p>
+                      {userName && userEmail && userName !== userEmail && (
+                        <p className="text-[11px] text-stone-500 font-medium mt-0.5">{userName}</p>
+                      )}
+                      {tx.userToken && (
+                        <p className="text-[9px] text-stone-400 font-mono mt-0.5">Token: {tx.userToken}</p>
+                      )}
                     </div>
 
                     {/* Setoran detail */}
@@ -7449,6 +7218,11 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
               {tab.label}
+              {tab.id === 'pending_partners' && partners.filter((p: any) => p.status === 'pending' && p.institutionId === institutionId).length > 0 && (
+                <span className="ml-1.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                  {partners.filter((p: any) => p.status === 'pending' && p.institutionId === institutionId).length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -7785,6 +7559,14 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
             <div className="divide-y divide-stone-50">
               {transactions.map((tx: any) => {
                 const partner = partners.find((p: any) => p.id === tx.partnerId || p.id === tx.partnerUid);
+                const matchedUser = users.find((u: any) =>
+                  (u.qrToken && (u.qrToken === tx.userToken || u.qrToken === tx.userUid)) ||
+                  (u.uid && (u.uid === tx.userUid || u.uid === tx.userToken)) ||
+                  (u.email && tx.userEmail && u.email.toLowerCase() === tx.userEmail.toLowerCase())
+                );
+                const userEmail = tx.userEmail || matchedUser?.email || '';
+                const userName = tx.userName || tx.userDisplayName || matchedUser?.displayName || '';
+
                 const itemsList: {category: string; weight: number}[] =
                   tx.items && tx.items.length > 0
                     ? tx.items
@@ -7811,11 +7593,14 @@ const InstitutionAdminDashboard = ({ onLogout, adminUserId }: { onLogout: () => 
 
                     {/* Pengguna */}
                     <div>
-                      <p className="text-xs font-semibold text-stone-700">
-                        {tx.userName || tx.userDisplayName || '-'}
+                      <p className="text-xs font-bold text-stone-800 leading-tight break-all">
+                        {userEmail || userName || (tx.userToken ? `Token: ${tx.userToken}` : '-')}
                       </p>
+                      {userName && userEmail && userName !== userEmail && (
+                        <p className="text-[11px] text-stone-500 font-medium mt-0.5">{userName}</p>
+                      )}
                       <p className="text-[10px] text-stone-400 font-mono mt-0.5 truncate max-w-[140px]">
-                        {tx.userEmail || tx.userToken || ''}
+                        {tx.userToken ? `Token: ${tx.userToken}` : ''}
                       </p>
                     </div>
 
