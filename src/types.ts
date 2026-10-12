@@ -77,3 +77,74 @@ export interface Mission {
   questions?: QuizQuestion[];
   timeLimitSeconds?: number;
 }
+
+// ─── User & Activity Types ─────────────────────────────────────────
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  type: 'success' | 'warning' | 'info';
+  isRead: boolean;
+  depositId?: string;
+  userName?: string;
+  depositItems?: { category: string; name?: string; weight: number; points: number }[];
+  totalWeight?: number;
+  totalPoints?: number;
+}
+
+export interface ScanHistoryItem {
+  id: string;
+  name: string;
+  category: string;
+  date: string;
+  impact: { co2: number; water: number; energy: number };
+  image?: string;
+}
+
+export interface DepositHistoryItem {
+  id: string;
+  date: string;
+  items: { category: string; weight: number; points: number }[];
+  totalPoints: number;
+  totalWeight: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  image?: string;
+  photoUrl?: string;
+  proofImage?: string;
+  location?: string;
+  userEmail?: string;
+  userUid?: string;
+}
+
+export interface ClaimHistoryItem {
+  id: string;
+  title: string;
+  points: number;
+  date: string;
+  status: 'Pending' | 'Success' | 'Rejected';
+  userEmail?: string;
+  userUid?: string;
+}
+
+export interface UserData {
+  uid?: string;
+  email: string;
+  displayName: string;
+  role?: string;
+  institutionId?: string;
+  institutionCode?: string;
+  qrToken?: string;
+  points: number;
+  scans: number;
+  level: string;
+  streak: number;
+  lastLogin: string;
+  mascotName: string;
+  isBanned?: boolean;
+  history: { date: string; co2: number; water: number; energy: number }[];
+  scanHistory: ScanHistoryItem[];
+  claimHistory: ClaimHistoryItem[];
+  depositHistory: DepositHistoryItem[];
+  notifications: NotificationItem[];
+}
