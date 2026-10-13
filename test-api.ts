@@ -5,7 +5,7 @@ dotenv.config();
 
 const apiKey = process.env.VITE_GEMINI_API_KEY;
 
-async function testModelHealth() {
+async function checkHealth() {
   if (!apiKey) return console.log("No API key");
   const genAI = new GoogleGenerativeAI(apiKey);
   try {
@@ -17,5 +17,5 @@ async function testModelHealth() {
   }
 }
 
-testModelHealth();
+checkHealth();
 

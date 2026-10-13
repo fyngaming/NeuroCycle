@@ -112,6 +112,23 @@ const ID_LABEL_MAP: Record<string, string> = {
   'shoe': 'Sepatu Bekas',
   'sneaker': 'Sepatu Bekas',
   'clog': 'Sandal Kayu/Karet',
+  'backpack': 'Tas Ransel',
+  'back pack': 'Tas Ransel',
+  'knapsack': 'Tas Ransel',
+  'rucksack': 'Tas Ransel',
+  'packsack': 'Tas Ransel',
+  'haversack': 'Tas Ransel',
+  'water bottle': 'Botol Air Mineral',
+  'pop bottle': 'Botol Minuman Plastik',
+  'beer bottle': 'Botol Kaca Bekas',
+  'wine bottle': 'Botol Kaca Bekas',
+  'pill bottle': 'Botol Plastik Obat',
+  'plastic bag': 'Kantong Plastik',
+  'carton': 'Kardus Bekas',
+  'bucket': 'Ember Plastik',
+  'can': 'Kaleng Minuman',
+  'tin can': 'Kaleng Logam',
+  'packet': 'Bungkus Plastik',
   'botol plastik': 'Botol Plastik',
   'botol kaca': 'Botol Kaca',
   'galon plastik': 'Galon Plastik',
@@ -389,29 +406,26 @@ const ID_LABEL_MAP: Record<string, string> = {
 };
 
 function formatLabel(label: string): string {
-  const cleaned = label
+  // Ambil hanya frasa pertama sebelum tanda koma jika ada daftar sinonim dari model lokal
+  const rawFirst = (label || '').split(',')[0].trim().toLowerCase();
+  const cleaned = rawFirst
     .replace(/_/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
+    .trim();
 
-  if (!cleaned) return "Sampah Visual";
+  if (!cleaned) return "Sampah Campuran";
 
   const direct = ID_LABEL_MAP[cleaned];
   if (direct) return direct;
 
   const words = cleaned.split(' ');
-
   for (const word of words) {
     const translated = ID_LABEL_MAP[word];
     if (translated) return translated;
   }
 
-  const titleCase = words
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-
-  return titleCase || "Sampah Visual";
+  // Jika tetap tidak ditemukan di kamus, berikan label sampah berbahasa Indonesia
+  return "Sampah Daur Ulang";
 }
 
 function normalizeWasteAnalysis(analysis: WasteAnalysis, confidence: number): WasteAnalysis {
@@ -1492,15 +1506,15 @@ Kembalikan HANYA JSON dengan struktur berikut (tanpa teks lain):
         model: modelName,
         generationConfig: { 
           responseMimeType: "application/json",
-          maxOutputTokens: 600,
+          maxOutputTokens: 1500,
           temperature: 0.1
         } 
       });
 
-      // Timeout per model 6.5 detik agar respon cepat dan tidak macet
+      // Timeout per model 12 detik agar Gemini punya waktu menghasilkan seluruh JSON tanpa terpotong
       const result = await Promise.race([
         model.generateContent(parts),
-        delay(6500).then(() => { throw new Error(`Model ${modelName} timeout (6.5s)`); })
+        delay(12000).then(() => { throw new Error(`Model ${modelName} timeout (12s)`); })
       ]);
 
       const text = result.response.text().trim();
@@ -1559,11 +1573,11 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
 
   if (!skipGemini) {
     try {
-      // Timeout maksimal 15 detik untuk seluruh proses cloud AI
-      const timeoutMs = 15000;
+      // Timeout maksimal 20 detik untuk seluruh proses cloud AI
+      const timeoutMs = 20000;
       const geminiResult = await Promise.race([
         analyzeWasteWithGemini(base64Image, userId),
-        delay(timeoutMs).then(() => { throw new Error('Gemini timeout (15s)'); }),
+        delay(timeoutMs).then(() => { throw new Error('Gemini timeout (20s)'); }),
       ]);
       return geminiResult;
     } catch (error: any) {
