@@ -387,7 +387,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
   // Success modal after approving a deposit
   if (approveSuccessInfo) {
     return (
-      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-60 p-6 animate-fade-in">
+      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6 animate-fade-in">
         <div className="bg-white rounded-[40px] p-8 max-w-md w-full text-center shadow-2xl relative overflow-hidden">
           {/* Top accent bar */}
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 to-teal-500" />
@@ -440,7 +440,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
   }
 
   return (
-    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-60 p-6 animate-fade-in">
+    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6 animate-fade-in">
       <div className="bg-white rounded-[40px] p-8 w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col relative">
         <div className="absolute top-0 left-0 right-0 h-2 bg-linear-to-r from-emerald-500 to-teal-500" />
 

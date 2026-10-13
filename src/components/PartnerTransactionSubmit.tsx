@@ -271,7 +271,7 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
 
   if (successInfo) {
     return (
-      <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center z-60 p-6">
+      <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center z-[100] p-6">
         <div className="bg-white rounded-[40px] p-8 max-w-md w-full text-center">
           <Check size={48} className="text-emerald-600 mx-auto mb-4" />
           <h3 className="font-black text-2xl mb-2">{successInfo.title}</h3>
@@ -295,7 +295,7 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
 
   if (partnerStatus === 'suspended') {
     return (
-      <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center z-60 p-6">
+      <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center z-[100] p-6">
         <div className="bg-white rounded-[40px] p-8 w-full max-w-md max-h-[90vh] flex flex-col text-center">
           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle size={32} />
@@ -316,7 +316,7 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
     <>
       {/* Modal Scanner QR Terpisah & Diperbesar */}
       {showScanner && (
-        <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] p-6 w-full max-w-lg shadow-2xl flex flex-col border border-stone-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -357,7 +357,7 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
       )}
 
       {/* Modal Input Setoran Sampah Utama */}
-      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center z-60 p-4 md:p-6">
+      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center z-[100] p-4 md:p-6">
         <div className="bg-white rounded-[36px] p-6 md:p-8 w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl">
           <div className="flex items-center justify-between mb-3">
             <div>

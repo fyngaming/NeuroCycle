@@ -6795,7 +6795,7 @@ setProgressMsg('Mendeteksi jenis sampah...');
           </div>
         )}
         {state === 'partner_dashboard' && partnerData && (
-          <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-50">
+          <div className="fixed inset-0 z-[100] overflow-y-auto bg-stone-50">
             <PartnerDashboard
               partnerId={partnerData.id}
               onClose={() => {
@@ -7657,7 +7657,24 @@ setProgressMsg('Mendeteksi jenis sampah...');
         onChange={handleImageInput}
       />
 
-      {(state !== 'login' && state !== 'welcome' && state !== 'admin_dashboard' && state !== 'super_admin_dashboard' && state !== 'institution_admin_dashboard' && state !== 'education_detail' && state !== 'scan_options' && state !== 'waste_bank_list' && state !== 'waste_bank_calculate' && state !== 'waste_bank_verify' && state !== 'daily_missions' && state !== 'quiz' && !showPartnerDashboard && !showPartnerOnboard && !showPartnerTx) && (
+      {(state !== 'login' && 
+        state !== 'welcome' && 
+        state !== 'admin_dashboard' && 
+        state !== 'super_admin_dashboard' && 
+        state !== 'institution_admin_dashboard' && 
+        state !== 'partner_dashboard' && 
+        state !== 'education_detail' && 
+        state !== 'scan_options' && 
+        state !== 'waste_bank_list' && 
+        state !== 'waste_bank_calculate' && 
+        state !== 'waste_bank_verify' && 
+        state !== 'daily_missions' && 
+        state !== 'quiz' && 
+        !showPartnerDashboard && 
+        !showPartnerOnboard && 
+        !showPartnerTx && 
+        !partnerData && 
+        userData?.role !== 'partner') && (
         <BottomNav
           active={state}
           onChange={(nextState) => setState(nextState)}
@@ -7896,7 +7913,18 @@ setProgressMsg('Mendeteksi jenis sampah...');
       </AnimatePresence>
 
       {/* NeuroBot Chatbot */}
-      {state !== 'login' && state !== 'welcome' && state !== 'admin_dashboard' && state !== 'quiz' && (
+      {state !== 'login' && 
+       state !== 'welcome' && 
+       state !== 'admin_dashboard' && 
+       state !== 'super_admin_dashboard' && 
+       state !== 'institution_admin_dashboard' && 
+       state !== 'partner_dashboard' && 
+       state !== 'quiz' && 
+       !showPartnerDashboard && 
+       !showPartnerOnboard && 
+       !showPartnerTx && 
+       !partnerData && 
+       userData?.role !== 'partner' && (
         <NeuroBot userData={userData} />
       )}
     </div>

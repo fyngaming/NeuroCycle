@@ -151,7 +151,7 @@ const PartnerOnboarding = ({ uid, onClose }: { uid?: string; onClose: () => void
 
   if (loadingStatus) {
     return (
-      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-60 p-6">
+      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6">
         <div className="bg-white rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl">
           <Loader2 className="animate-spin text-emerald-600 mx-auto mb-4" size={48} />
           <p className="text-stone-500 font-bold uppercase tracking-widest text-xs">Memeriksa Status Kemitraan...</p>
@@ -167,7 +167,7 @@ const PartnerOnboarding = ({ uid, onClose }: { uid?: string; onClose: () => void
     const isRejected = existingPartner.status === 'rejected';
 
     return (
-      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-60 p-6 animate-fade-in">
+      <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6 animate-fade-in">
         <div className="bg-white rounded-[40px] p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-2 bg-linear-to-r from-emerald-500 to-teal-500" />
           
@@ -248,7 +248,7 @@ const PartnerOnboarding = ({ uid, onClose }: { uid?: string; onClose: () => void
   }
 
   return (
-    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-60 p-6 animate-fade-in">
+    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6 animate-fade-in">
       <div className="bg-white rounded-[40px] p-8 w-full max-w-md shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         <div className="absolute top-0 left-0 right-0 h-2 bg-linear-to-r from-emerald-500 to-teal-500" />
         
