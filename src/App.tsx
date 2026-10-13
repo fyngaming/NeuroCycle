@@ -5523,61 +5523,81 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
 
   const getQuickAnswer = (text: string) => {
     const q = text.toLowerCase();
-    if (q.includes('setor') || q.includes('deposit') || q.includes('bank sampah')) {
-      return 'Untuk setor sampah, buka menu Setor/Partner, pilih atau scan QR mitra, isi berat dan kategori, lalu unggah foto bukti. Petugas partner akan konfirmasi agar poin masuk ke akunmu.';
+
+    // 1. Prioritaskan status transaksi (pending / ditolak / review)
+    if (q.includes('pending') || q.includes('tertunda') || q.includes('belum masuk') || q.includes('menunggu')) {
+      return 'Status setoran pending artinya setoranmu sedang menunggu konfirmasi/verifikasi dari petugas bank sampah mitra. Pastikan foto bukti sudah jelas. Setelah petugas mengklik konfirmasi, NeuroPoints akan otomatis bertambah ke akunmu.';
     }
-    if (q.includes('klaim') || q.includes('hadiah') || q.includes('reward')) {
-      return 'Buka menu Reward/Redeem, pilih hadiah yang tersedia, lalu klik klaim. Klaim akan masuk status pending sampai admin menyetujui. Poin akan berkurang setelah klaim berhasil.';
+
+    // 2. Transaksi Flagged
+    if (q.includes('flagged') || q.includes('curiga') || q.includes('tinjau') || q.includes('anomali')) {
+      return 'Status Flagged berarti sistem mendeteksi hal yang perlu ditinjau admin (seperti berat tidak wajar atau perbedaan foto). Jangan khawatir, transaksi tetap aman dan akan diproses secara manual oleh admin.';
     }
-    if (q.includes('poin') || q.includes('neuropoints') || q.includes('np')) {
-      return `Poinmu saat ini ${userData.points.toLocaleString()} NP. Poin didapat dari scan AI, setoran sampah, misi harian, dan klaim reward. Total setoran tercatat ${totalDeposits}x dengan total ${totalKg.toFixed(1)} kg.`;
+
+    // 3. Waktu & Jadwal ("Kapan bisa setor")
+    if (q.includes('kapan') || q.includes('jadwal') || q.includes('jam buka') || q.includes('hari apa') || q.includes('operasional')) {
+      return 'Kamu bisa menyetorkan sampah kapan saja sesuai jadwal operasional mitra/bank sampah terdaftar di kotamu (umumnya Senin–Sabtu pukul 08.00–16.00). Cek daftar dan lokasi mitra terdekat di menu "Lokasi" pada navigasi bawah.';
     }
-    if (q.includes('sampah') || q.includes('kategori') || q.includes('plastik')) {
-      return 'Kategori utama: Plastik, Kertas, Logam, Kaca, Kardus, Organik, Residu, dan B3. Pilah sesuai jenis material agar lebih mudah didaur ulang dan mendapat poin.';
+
+    // 4. Jenis / Apa saja sampah yang bisa disetor
+    if (q.includes('apa saja') || q.includes('jenis sampah') || q.includes('bisa disetor') || q.includes('kategori') || q.includes('terima sampah apa')) {
+      return 'Sampah yang diterima meliputi: 1) Plastik (botol PET, gelas, emberan), 2) Kertas & Kardus, 3) Logam & Aluminium, 4) Kaca/Botol kaca, 5) Minyak jelantah, dan 6) Limbah elektronik kecil. Pastikan sampah dalam kondisi kering dan sudah dipilah ya!';
     }
-    if (q.includes('pending')) {
-      return 'Setoran pending berarti petugas atau admin belum menyetujui. Jika ada foto bukti dan data sudah sesuai, partner bisa klik Konfirmasi di Partner Dashboard agar poin masuk.';
+
+    // 5. Cara / Prosedur Setor
+    if (q.includes('cara setor') || q.includes('bagaimana cara menyetor') || q.includes('langkah setor') || q.includes('prosedur setor') || q.includes('menyetorkan')) {
+      return 'Cara setor sampah: 1) Pilah sampah di rumah, 2) Kunjungi Bank Sampah terdaftar (lihat menu Lokasi), 3) Tunjukkan QR Token akunmu ke petugas atau scan QR mitra, 4) Timbang dan foto bukti setoran. Petugas akan memvalidasi dan poinmu langsung masuk!';
     }
-    if (q.includes('flagged')) {
-      return 'Flagged berarti transaksi terdeteksi anomali, misalnya berat terlalu besar, frekuensi tinggi, atau waktu tidak wajar. Transaksi tetap bisa ditinjau dan disetujui oleh partner/admin.';
+
+    // 6. Hadiah / Redeem / Tukar
+    if (q.includes('klaim') || q.includes('hadiah') || q.includes('reward') || q.includes('tukar poin') || q.includes('redeem')) {
+      return 'Untuk menukar hadiah: Buka menu Tukar Poin / Hadiah, pilih voucher atau merchandise yang kamu inginkan, lalu klik Tukar. Pengajuan penukaran akan diverifikasi oleh admin sebelum voucher dikirimkan.';
     }
+
+    // 7. Poin / Saldo
+    if (q.includes('poin') || q.includes('neuropoints') || q.includes('saldo') || q.includes('np')) {
+      return `Saldo NeuroPoints kamu saat ini adalah ${userData.points.toLocaleString()} NP. Kamu bisa dapat poin dari: scan deteksi AI sampah, setor sampah ke bank sampah, dan menyelesaikan misi harian!`;
+    }
+
+    // 8. Misi Harian / Level
+    if (q.includes('misi') || q.includes('level') || q.includes('streak')) {
+      return `Level kamu saat ini: "${userData.level}" dengan streak ${userData.streak} hari. Selesaikan misi harian di menu Misi setiap hari untuk mendapatkan bonus NeuroPoints dan menjaga streak apimu tetap menyala!`;
+    }
+
     return '';
   };
 
   const getGeminiFallbackMessage = (text: string, err: unknown) => {
     console.error('NeuroBot error:', err);
-    return getQuickAnswer(text) || 'Maaf, saya sedang tidak bisa menjawab dengan lengkap. Coba tanyakan seputar setor sampah, klaim hadiah, poin, kategori sampah, pending, atau flagged transaction.';
+    return getQuickAnswer(text) || 'Halo! Saya NeuroBot siap membantu seputar fitur NeuroCycle. Kamu bisa menanyakan jadwal setor, jenis sampah yang diterima, cara tukar hadiah, atau alasan status setoran pending.';
   };
 
   const buildPrompt = (text: string) => {
-    const quickAnswer = getQuickAnswer(text);
     const recentHistory = [
-      ...messages.slice(-8),
+      ...messages.slice(-6),
       { role: 'user' as const, text },
     ]
       .map(msg => `${msg.role === 'user' ? 'User' : 'NeuroBot'}: ${msg.text}`)
       .join('\n');
 
     return (
-      'Kamu adalah NeuroBot, asisten resmi aplikasi NeuroCycle untuk pengelolaan sampah cerdas di Indonesia.\n\n' +
-      'Gaya jawaban:\n' +
-      '- Gunakan Bahasa Indonesia yang ramah, singkat, jelas, dan praktis.\n' +
-      '- Maksimal 4 kalimat atau 4 bullet point.\n' +
-      '- Jangan mengarang fitur yang tidak ada. Jika tidak yakin, arahkan user membuka menu terkait atau hubungi admin/partner.\n' +
-      '- Gunakan emoji maksimal 1 per jawaban.\n' +
-      '- Prioritaskan jawaban berbasis data user dan fitur NeuroCycle.\n\n' +
-      'Data user saat ini:\n' +
-      `- Nama: ${userData.displayName || 'User'}\n` +
-      `- Poin: ${userData.points.toLocaleString()} NeuroPoints\n` +
-      `- Level: ${userData.level} (Skor: ${score})\n` +
-      `- Streak: ${userData.streak} hari\n` +
-      `- Total Scan AI: ${userData.scans}x\n` +
-      `- Total Setor: ${totalDeposits}x (${totalKg.toFixed(1)} kg)\n\n` +
-      'Jawaban cepat yang wajib dipakai jika relevan:\n' +
-      `${quickAnswer || '- Tidak ada jawaban cepat yang cocok; jawab berdasarkan pertanyaan user.'}\n\n` +
-      'Riwayat percakapan terakhir:\n' +
-      `${recentHistory || '- Belum ada riwayat.'}\n\n` +
-      'Pertanyaan user:\n' +
+      'Kamu adalah NeuroBot, asisten AI resmi dari aplikasi NeuroCycle (aplikasi pemilahan dan daur ulang sampah cerdas berbasis AI di Indonesia).\n\n' +
+      'Pedoman Jawaban:\n' +
+      '- Jawablah secara spesifik dan relevan terhadap apa yang ditanyakan user.\n' +
+      '- Jika user bertanya tentang waktu/jadwal setor: jelaskan bahwa setoran mengikuti jam operasional mitra bank sampah (Senin-Sabtu 08.00-16.00) dan arahkan cek menu Lokasi.\n' +
+      '- Jika user bertanya kenapa pending: jelaskan bahwa petugas mitra sedang memverifikasi fisik setoran dan foto bukti, dan poin akan masuk setelah disetujui.\n' +
+      '- Jika user bertanya jenis sampah: sebutkan Plastik, Kertas, Kardus, Logam/Aluminium, Kaca, dan jelaskan harus bersih/kering.\n' +
+      '- Jika user bertanya cara setor: jelaskan langkahnya (pilah, bawa ke bank sampah, scan QR/token, timbang, tunggu verifikasi).\n' +
+      '- Gunakan Bahasa Indonesia yang ramah, ringkas, padat, dan mudah dipahami (maksimal 3-4 kalimat).\n\n' +
+      'Informasi Pengguna:\n' +
+      `- Nama: ${userData.displayName || 'Pengguna'}\n` +
+      `- Saldo Poin: ${userData.points.toLocaleString()} NeuroPoints\n` +
+      `- Level: ${userData.level}\n` +
+      `- Streak Aktif: ${userData.streak} hari\n` +
+      `- Total Setoran: ${totalDeposits} kali (${totalKg.toFixed(1)} kg)\n\n` +
+      'Riwayat Percakapan:\n' +
+      `${recentHistory}\n\n` +
+      'Pertanyaan Pengguna Saat Ini:\n' +
       text
     );
   };
@@ -5587,17 +5607,38 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
     setMessages(prev => [...prev, { role: 'user', text }]);
     setInput('');
     setLoading(true);
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-      const result = await model.generateContent(buildPrompt(text));
-      const rawText = result.response.text().trim();
-      const botText = rawText || 'Maaf, saya belum bisa menjawab dengan jelas. Coba tanyakan seputar fitur NeuroCycle seperti setor sampah, klaim hadiah, poin, atau flagged transaction.';
-      setMessages(prev => [...prev, { role: 'bot', text: botText }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'bot', text: getGeminiFallbackMessage(text, err) }]);
-    } finally {
-      setLoading(false);
+
+    const FALLBACK_MODELS = [
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-3.5-flash',
+      'gemini-3.6-flash',
+      'gemini-2.5-flash-lite'
+    ];
+
+    let replySuccess = false;
+    let lastError: unknown = null;
+
+    for (const modelName of FALLBACK_MODELS) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(buildPrompt(text));
+        const rawText = result.response.text().trim();
+        if (rawText) {
+          setMessages(prev => [...prev, { role: 'bot', text: rawText }]);
+          replySuccess = true;
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`NeuroBot model ${modelName} failed, trying next model...`, err);
+      }
     }
+
+    if (!replySuccess) {
+      setMessages(prev => [...prev, { role: 'bot', text: getGeminiFallbackMessage(text, lastError) }]);
+    }
+    setLoading(false);
   };
 
   React.useEffect(() => {
