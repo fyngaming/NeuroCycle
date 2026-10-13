@@ -73,10 +73,10 @@ export interface WasteAnalysis {
 }
 
 const IMAGE_ANALYSIS_MODELS = [
-  "gemini-3.6-flash",
+  "gemini-3-flash-preview",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
   "gemini-3.5-flash",
-  "gemini-3.7-flash",
-  "gemini-3.8-flash",
 ];
 
 let localVisionModelPromise: Promise<any> | null = null;
@@ -1487,17 +1487,28 @@ Kembalikan HANYA JSON dengan struktur berikut (tanpa teks lain):
     try {
       const model = genAI.getGenerativeModel({ 
         model: modelName,
-        generationConfig: { responseMimeType: "application/json" } 
+        generationConfig: { 
+          responseMimeType: "application/json",
+          maxOutputTokens: 800,
+          temperature: 0.2
+        } 
       });
-      const result = await model.generateContent(parts);
+
+      // Timeout per model 8.5 detik agar tidak macet/lama
+      const result = await Promise.race([
+        model.generateContent(parts),
+        delay(8500).then(() => { throw new Error(`Model ${modelName} timeout (8.5s)`); })
+      ]);
+
       const text = result.response.text().trim();
       if (!text) throw new Error("No analysis result received from AI");
       const parsed = parseWasteAnalysis(text);
       if (parsed.isNotWaste || parsed.category === "Bukan Sampah") {
         throw new Error("BUKAN_SAMPAH: Objek yang dipindai bukan merupakan sampah. Mohon pindaikan barang bekas atau sampah yang dapat didaur ulang.");
       }
-      return normalizeWasteAnalysis(parsed, 0.82);
+      return normalizeWasteAnalysis(parsed, 0.88);
     } catch (e: any) {
+      if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
       errors.push(`${modelName}: ${e?.message || e}`);
       await logError({
         severity: 'WARNING',
@@ -1540,66 +1551,41 @@ export async function analyzeWaste(base64Image: string, userId?: string): Promis
     throw validationError;
   }
 
-  // ONNX local filter disabled: model too large (11.7MB) for browser WebAssembly memory
-  // Detection handled entirely by Gemini AI to prevent Out of Memory crashes
-
-  let geminiError: Error | null = null;
-
-  // Skip cloud Gemini entirely if no API key is configured (use local on-device analysis)
+  // Skip cloud Gemini entirely if no API key is configured
   const skipGemini = !apiKey;
 
   if (!skipGemini) {
-    // Try cloud Gemini with extended timeout and one retry
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const timeoutMs = 60000; // 60s
-        const geminiResult = await Promise.race([
-          analyzeWasteWithGemini(base64Image, userId),
-          delay(timeoutMs).then(() => { throw new Error('Gemini timeout'); }),
-        ]);
-        return geminiResult;
-      } catch (error: any) {
-        geminiError = error instanceof Error ? error : new Error(String(error));
-        console.warn(`Gemini attempt ${attempt + 1} failed:`, geminiError.message);
+    try {
+      // Timeout maksimal 15 detik untuk seluruh proses cloud AI
+      const timeoutMs = 15000;
+      const geminiResult = await Promise.race([
+        analyzeWasteWithGemini(base64Image, userId),
+        delay(timeoutMs).then(() => { throw new Error('Gemini timeout (15s)'); }),
+      ]);
+      return geminiResult;
+    } catch (error: any) {
+      const geminiError = error instanceof Error ? error : new Error(String(error));
+      console.warn('Gemini cloud scan failed, beralih ke analisis lokal:', geminiError.message);
 
-        // Jika hasil deteksi menyatakan BUKAN_SAMPAH, langsung lempar error tanpa retry
-        if (geminiError.message.includes('BUKAN_SAMPAH')) {
-          throw geminiError;
-        }
-
-        await logError({
-          severity: 'WARNING',
-          type: 'gemini_api_failed',
-          message: `Gemini attempt ${attempt + 1}/${2} failed: ${geminiError.message}`,
-          context: 'waste_scan',
-          userId,
-          functionName: 'analyzeWaste',
-          metadata: { attempt: attempt + 1, error: geminiError.message }
-        });
-        // If the model is text-only / invalid / not found, retrying won't help — fall back to local now
-        const msg = geminiError.message.toLowerCase();
-        const fatal = msg.includes('does not support image') || msg.includes('not found') ||
-          msg.includes('not supported') || msg.includes('invalid') || msg.includes('permission') ||
-          msg.includes('api key') || msg.includes('api_key') || msg.includes('unauthorized');
-        if (fatal) break;
-        // small backoff before retry
-        if (attempt === 0) await delay(1000);
+      // Jika hasil deteksi menyatakan BUKAN_SAMPAH, langsung lempar error tanpa fallback
+      if (geminiError.message.includes('BUKAN_SAMPAH')) {
+        throw geminiError;
       }
+
+      await logError({
+        severity: 'WARNING',
+        type: 'gemini_api_failed',
+        message: `Gemini cloud scan failed: ${geminiError.message}`,
+        context: 'waste_scan',
+        userId,
+        functionName: 'analyzeWaste',
+        metadata: { error: geminiError.message }
+      });
     }
   }
-  
-  await logError({
-    severity: 'ERROR',
-    type: 'gemini_exhausted_retries',
-    message: `Gemini failed after 2 attempts: ${geminiError?.message || 'unknown'}. Fallback to local analysis.`,
-    context: 'waste_scan',
-    userId,
-    functionName: 'analyzeWaste'
-  });
-  console.warn('Gemini gagal setelah retry, menggunakan analisis lokal:', geminiError?.message || 'unknown');
 
-  // ONNX fallback disabled: use local Gemini-free analysis instead
-
+  // Fallback to local on-device analysis if cloud Gemini fails
+  console.warn('Gemini cloud scan tidak tersedia, menggunakan analisis on-device lokal...');
   const localResult = await analyzeWasteLocally(base64Image, userId);
   return localResult;
   } catch (e: any) {
