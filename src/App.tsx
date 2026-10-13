@@ -6451,8 +6451,8 @@ const ReadingTimer = ({
       img.src = base64Str;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1024;
-        const MAX_HEIGHT = 1024;
+        const MAX_WIDTH = 640;
+        const MAX_HEIGHT = 640;
         let width = img.width;
         let height = img.height;
 
@@ -6468,11 +6468,11 @@ const ReadingTimer = ({
           }
         }
 
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.round(width);
+        canvas.height = Math.round(height);
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.92));
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.80));
       };
     });
   };
@@ -6499,22 +6499,10 @@ const ReadingTimer = ({
 
       const pureBase64 = compressedBase64.split(',')[1];
 
-setProgressMsg('Mendeteksi jenis sampah...');
-       let analysis: WasteAnalysis;
-       const onnxAvailable = isONNXModelAvailable();
-       if (onnxAvailable) {
-         try {
-           const onnxResult = await detectWasteWithONNX(compressedBase64);
-           if (onnxResult.modelLoaded && !onnxResult.isWaste) {
-             throw new Error('BUKAN_SAMPAH: Objek yang Anda pindai tidak terdeteksi sebagai sampah. Silakan pindai objek sampah yang valid.');
-           }
-         } catch (e: any) {
-           if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
-           console.warn('ONNX pre-filter skipped, using Gemini:', e?.message || 'unknown');
-         }
-       }
-        try {
-          analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
+      setProgressMsg('Menganalisis jenis sampah dengan AI...');
+      let analysis: WasteAnalysis;
+      try {
+        analysis = await analyzeWaste(pureBase64, user?.uid || userData.uid);
         } catch (e: any) {
           if (e?.message?.includes('BUKAN_SAMPAH')) throw e;
           analysis = {

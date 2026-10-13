@@ -26,7 +26,7 @@ export { genAI };
 // Fungsi untuk memverifikasi label sampah menggunakan Gemini
 export async function verifyWasteLabel(base64Image: string, detectedLabel: string): Promise<string | null> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
     const prompt = `Apakah label "${detectedLabel}" tepat untuk gambar ini? Berikan nama kategori sampah yang paling tepat dalam Bahasa Indonesia, satu kata saja. Jika tidak cocok, beri label yang lebih sesuai.`;
     const result = await model.generateContent([
@@ -74,9 +74,8 @@ export interface WasteAnalysis {
 
 const IMAGE_ANALYSIS_MODELS = [
   "gemini-3-flash-preview",
-  "gemini-3.1-flash-lite",
+  "gemini-3.8-flash",
   "gemini-flash-latest",
-  "gemini-3.5-flash",
 ];
 
 let localVisionModelPromise: Promise<any> | null = null;
@@ -109,6 +108,10 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 const ID_LABEL_MAP: Record<string, string> = {
+  'running shoe': 'Sepatu Bekas',
+  'shoe': 'Sepatu Bekas',
+  'sneaker': 'Sepatu Bekas',
+  'clog': 'Sandal Kayu/Karet',
   'botol plastik': 'Botol Plastik',
   'botol kaca': 'Botol Kaca',
   'galon plastik': 'Galon Plastik',
@@ -1489,15 +1492,15 @@ Kembalikan HANYA JSON dengan struktur berikut (tanpa teks lain):
         model: modelName,
         generationConfig: { 
           responseMimeType: "application/json",
-          maxOutputTokens: 800,
-          temperature: 0.2
+          maxOutputTokens: 600,
+          temperature: 0.1
         } 
       });
 
-      // Timeout per model 8.5 detik agar tidak macet/lama
+      // Timeout per model 6.5 detik agar respon cepat dan tidak macet
       const result = await Promise.race([
         model.generateContent(parts),
-        delay(8500).then(() => { throw new Error(`Model ${modelName} timeout (8.5s)`); })
+        delay(6500).then(() => { throw new Error(`Model ${modelName} timeout (6.5s)`); })
       ]);
 
       const text = result.response.text().trim();

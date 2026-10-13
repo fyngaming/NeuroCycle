@@ -5,23 +5,17 @@ dotenv.config();
 
 const apiKey = process.env.VITE_GEMINI_API_KEY;
 
-async function listModels() {
-  console.log("--- Mencari Daftar Model Tersedia ---");
-  if (!apiKey) return;
-
+async function testModelHealth() {
+  if (!apiKey) return console.log("No API key");
+  const genAI = new GoogleGenerativeAI(apiKey);
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    const data = await response.json();
-    
-    if (data.models) {
-      console.log("Berhasil! Berikut model yang bisa Anda gunakan:");
-      data.models.forEach((m: any) => console.log("- " + m.name));
-    } else {
-      console.log("Google mengembalikan data kosong atau error:", JSON.stringify(data));
-    }
-  } catch (error: any) {
-    console.error("Gagal terhubung ke Google:", error.message);
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const res = await model.generateContent("Ping");
+    console.log("Gemini API connection healthy:", res.response.text().trim());
+  } catch (e: any) {
+    console.error("Gemini test failed:", e.message);
   }
 }
 
-listModels();
+testModelHealth();
+
