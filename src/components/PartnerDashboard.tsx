@@ -286,14 +286,21 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
           totalPoints,
           totalWeight,
           status: 'Approved',
-          image: tx.photoUrl || '',
+          image: tx.photoUrl && !tx.photoUrl.startsWith('data:') ? tx.photoUrl : '',
           location: partner?.name || 'Bank Sampah Partner',
           userEmail: uData.email || '',
           userUid
         };
 
         const updatedPoints = (uData.points || 0) + totalPoints;
-        const updatedHistory = [newDeposit, ...(uData.depositHistory || []).filter((item: any) => item.id !== tx.id)];
+        const sanitizedPrevHistory = (uData.depositHistory || [])
+          .filter((item: any) => item.id !== tx.id)
+          .map((item: any) => ({
+            ...item,
+            image: (item.image && typeof item.image === 'string' && item.image.startsWith('data:')) ? '' : (item.image || ''),
+            photoUrl: (item.photoUrl && typeof item.photoUrl === 'string' && item.photoUrl.startsWith('data:')) ? '' : (item.photoUrl || ''),
+          }));
+        const updatedHistory = [newDeposit, ...sanitizedPrevHistory].slice(0, 30);
 
         const notifs = [...(uData.notifications || [])];
         notifs.unshift({
@@ -357,7 +364,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
           totalPoints: 0,
           totalWeight: finalWeight,
           status: 'Rejected',
-          image: tx.photoUrl || '',
+          image: tx.photoUrl && !tx.photoUrl.startsWith('data:') ? tx.photoUrl : '',
           location: partner?.name || 'Bank Sampah Partner',
           userEmail: uData.email || '',
           userUid
@@ -372,7 +379,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
           isRead: false
         });
         await updateDoc(doc(db, 'users', userUid), {
-          depositHistory: [rejectedDeposit, ...(uData.depositHistory || []).filter((item: any) => item.id !== tx.id)],
+          depositHistory: [rejectedDeposit, ...(uData.depositHistory || []).filter((item: any) => item.id !== tx.id).map((i: any) => ({ ...i, image: i.image?.startsWith('data:') ? '' : i.image, photoUrl: i.photoUrl?.startsWith('data:') ? '' : i.photoUrl }))].slice(0, 30),
           notifications: notifs
         });
       }

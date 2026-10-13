@@ -6546,7 +6546,7 @@ const ReadingTimer = ({
           water: analysis.impactStats.waterSaved,
           energy: analysis.impactStats.energySaved,
         },
-        image: compressedBase64
+        image: ''
       };
 
       const existingRecordIdx = userData.history.findIndex(h => h.date === todayFormatted);
@@ -6604,7 +6604,7 @@ const ReadingTimer = ({
         streak: newStreak,
         lastLogin: today,
         history: newHistory,
-        scanHistory: [newScanItem, ...(userData.scanHistory || [])]
+        scanHistory: [newScanItem, ...(userData.scanHistory || [])].slice(0, 30)
       });
 
       setState('result');
