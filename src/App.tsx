@@ -5613,21 +5613,34 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
     setInput('');
     setLoading(true);
 
+    // Model cepat berurutan
     const FALLBACK_MODELS = [
-      'gemini-3.7-flash',
-      'gemini-3.5-flash',
       'gemini-flash-latest',
-      'gemini-3.6-flash',
-      'gemini-3.8-flash',
+      'gemini-3.5-flash',
+      'gemini-3.7-flash',
     ];
 
     let replySuccess = false;
     let lastError: unknown = null;
 
+    // Timeout helper 4 detik agar tidak menggantung lama
+    const withTimeout = <T,>(promise: Promise<T>, ms: number = 4000): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+      ]);
+
     for (const modelName of FALLBACK_MODELS) {
       try {
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(buildPrompt(text));
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            maxOutputTokens: 250,
+            temperature: 0.7,
+          }
+        });
+        const promptText = buildPrompt(text);
+        const result = await withTimeout(model.generateContent(promptText), 4500);
         const rawText = result.response.text().trim();
         if (rawText) {
           setMessages(prev => [...prev, { role: 'bot', text: rawText }]);
@@ -5636,7 +5649,7 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
         }
       } catch (err) {
         lastError = err;
-        console.warn(`NeuroBot model ${modelName} failed, trying next model...`, err);
+        console.warn(`NeuroBot model ${modelName} gagal/timeout, mencoba alternatif...`, err);
       }
     }
 
