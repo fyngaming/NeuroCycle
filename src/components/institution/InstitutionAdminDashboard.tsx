@@ -108,6 +108,9 @@ export const InstitutionAdminDashboard: React.FC<InstitutionAdminDashboardProps>
     const unsubTx = onSnapshot(collection(db, 'transactions'), (snap) => {
       let allTx = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
       allTx = allTx.filter(tx => {
+        // Wajib memiliki foto bukti yang sah (bukan transaksi tanpa foto)
+        const hasPhoto = tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '';
+        if (!hasPhoto) return false;
         const byPartnerId = tx.partnerId && partnerIds.includes(tx.partnerId);
         const byPartnerUid = tx.partnerUid && partnerIds.includes(tx.partnerUid);
         return byPartnerId || byPartnerUid;
@@ -289,7 +292,9 @@ export const InstitutionAdminDashboard: React.FC<InstitutionAdminDashboardProps>
   // ─── Paginated Users Table Rows ─────────────────────────────────────
   const allUserRows = useMemo(() => {
     const rows: any[] = [];
-    transactions.forEach((tx: any) => {
+    transactions
+      .filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '')
+      .forEach((tx: any) => {
       const user = users.find((u: any) => u.uid === tx.userUid || u.qrToken === tx.userToken);
       rows.push({
         id: tx.id,

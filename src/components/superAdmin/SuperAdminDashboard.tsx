@@ -56,7 +56,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     const unsub4 = onSnapshot(collection(db, 'transactions'), (snap) => {
-      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      const validTxs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '')
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setTransactions(validTxs);
     });
     const unsub5 = onSnapshot(collection(db, 'errorLogs'), (snap) => {
       const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -155,9 +159,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
 
   // ─── Filtered & Paginated Collections ─────────────────────────────
   const filteredTransactions = useMemo(() => {
-    if (!txSearch.trim()) return transactions;
+    const validTransactions = transactions.filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '');
+    if (!txSearch.trim()) return validTransactions;
     const q = txSearch.toLowerCase();
-    return transactions.filter(tx => 
+    return validTransactions.filter(tx => 
       (tx.partnerName && tx.partnerName.toLowerCase().includes(q)) ||
       (tx.userEmail && tx.userEmail.toLowerCase().includes(q)) ||
       (tx.userName && tx.userName.toLowerCase().includes(q)) ||

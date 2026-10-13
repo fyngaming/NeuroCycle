@@ -597,7 +597,9 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
     if (!userData.uid) return;
     const q = query(collection(db, 'transactions'), where('userUid', '==', userData.uid));
     const unsub = onSnapshot(q, (snap) => {
-      const txs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const txs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '');
       setUserTransactions(txs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     });
     return () => unsub();
@@ -1842,68 +1844,8 @@ const WasteBankVerify = ({
   const [txCreated, setTxCreated] = useState(false);
 
   const handleSubmit = async () => {
-    // Jika pilih partner terdaftar → tampilkan QR
+    // Jika pilih partner terdaftar → langsung tampilkan QR untuk discan petugas bank sampah
     if (selectedPartnerId !== 'manual') {
-      if (selectedItems && userUid && userData && !txCreated && qrToken) {
-        setIsUploading(true);
-        try {
-          const itemsList = WASTE_CATEGORIES.filter(c => selectedItems[c.id]).map(c => ({
-            category: c.id,
-            name: c.name,
-            weight: selectedItems[c.id],
-            points: selectedItems[c.id] * c.pointsPerKg
-          }));
-          const totalWeight = itemsList.reduce((acc, curr) => acc + curr.weight, 0);
-          
-          // Compress preview photo if available
-          let compressedPhoto = '';
-          if (preview) {
-            try { compressedPhoto = await compressForFirestore(preview); } catch { compressedPhoto = preview; }
-          }
-
-          const txRef = doc(collection(db, 'transactions'));
-          await setDoc(txRef, {
-            partnerUid: selectedPartner?.id || null,
-            partnerId: selectedPartnerId,
-            partnerName: selectedPartner?.name || '',
-            institutionId: selectedPartner?.institutionId || null,
-            userUid,
-            userToken: qrToken,
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            items: itemsList,
-            totalWeight,
-            // for backwards compatibility:
-            category: itemsList[0]?.category || 'campuran',
-            weight: totalWeight,
-            // Bukti foto
-            photoUrl: compressedPhoto || '',
-            image: compressedPhoto || ''
-          });
-
-          // Also add to user's depositHistory as Pending
-          const depositLog = {
-            id: txRef.id,
-            date: new Date().toLocaleString('id-ID'),
-            items: itemsList.map(i => ({ category: i.name, weight: i.weight, points: i.points })),
-            totalPoints: itemsList.reduce((acc, i) => acc + i.points, 0),
-            totalWeight,
-            status: 'Pending',
-            image: compressedPhoto || '',
-            photoUrl: compressedPhoto || '',
-            location: selectedPartner?.name || 'Bank Sampah Partner',
-            userEmail: userData.email || '',
-            userUid
-          };
-          const updatedHistory = [depositLog, ...(userData.depositHistory || [])];
-          await setDoc(doc(db, 'users', userUid), { depositHistory: updatedHistory }, { merge: true });
-          setTxCreated(true);
-        } catch (e) {
-          console.error("Gagal membuat transaksi", e);
-        } finally {
-          setIsUploading(false);
-        }
-      }
       setShowQr(true);
       return;
     }
@@ -2859,7 +2801,10 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'transactions'), (snap) => {
-      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const validTxs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '');
+      setTransactions(validTxs);
     });
     return () => unsub();
   }, []);

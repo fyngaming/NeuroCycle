@@ -82,7 +82,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
     if (!partnerId) return;
     const q = query(collection(db, 'transactions'), where('partnerUid', '==', partnerId));
     const unsub = onSnapshot(q, (snap) => {
-      const allTxs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const allTxs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '');
       setTxs(allTxs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     });
     return () => unsub();
