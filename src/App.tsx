@@ -5534,32 +5534,37 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
       return 'Status Flagged berarti sistem mendeteksi hal yang perlu ditinjau admin (seperti berat tidak wajar atau perbedaan foto). Jangan khawatir, transaksi tetap aman dan akan diproses secara manual oleh admin.';
     }
 
-    // 3. Waktu & Jadwal ("Kapan bisa setor")
+    // 3. Bank Sampah mana saja / Lokasi / Cara Memilih
+    if (q.includes('bank sampah mana') || q.includes('lokasi') || q.includes('mitra mana') || (q.includes('pilih') && q.includes('bank sampah')) || (q.includes('tersedia') && q.includes('bank sampah'))) {
+      return 'Untuk melihat daftar Bank Sampah mitra yang tersedia dan memilihnya, buka menu "Lokasi" pada navigasi bawah. Kamu bisa memilih bank sampah terdekat, melihat alamat lengkap, jam operasional, dan nomor kontak pengelolanya.';
+    }
+
+    // 4. Waktu & Jadwal ("Kapan bisa setor")
     if (q.includes('kapan') || q.includes('jadwal') || q.includes('jam buka') || q.includes('hari apa') || q.includes('operasional')) {
       return 'Kamu bisa menyetorkan sampah kapan saja sesuai jadwal operasional mitra/bank sampah terdaftar di kotamu (umumnya Senin–Sabtu pukul 08.00–16.00). Cek daftar dan lokasi mitra terdekat di menu "Lokasi" pada navigasi bawah.';
     }
 
-    // 4. Jenis / Apa saja sampah yang bisa disetor
+    // 5. Jenis / Apa saja sampah yang bisa disetor
     if (q.includes('apa saja') || q.includes('jenis sampah') || q.includes('bisa disetor') || q.includes('kategori') || q.includes('terima sampah apa')) {
       return 'Sampah yang diterima meliputi: 1) Plastik (botol PET, gelas, emberan), 2) Kertas & Kardus, 3) Logam & Aluminium, 4) Kaca/Botol kaca, 5) Minyak jelantah, dan 6) Limbah elektronik kecil. Pastikan sampah dalam kondisi kering dan sudah dipilah ya!';
     }
 
-    // 5. Cara / Prosedur Setor
-    if (q.includes('cara setor') || q.includes('bagaimana cara menyetor') || q.includes('langkah setor') || q.includes('prosedur setor') || q.includes('menyetorkan')) {
+    // 6. Cara / Prosedur Setor (dukung variasi kata & typo seperti caraa, setoran, dll)
+    if (q.includes('setor') || q.includes('setoran') || q.includes('menyetor') || q.includes('prosedur') || q.includes('langkah')) {
       return 'Cara setor sampah: 1) Pilah sampah di rumah, 2) Kunjungi Bank Sampah terdaftar (lihat menu Lokasi), 3) Tunjukkan QR Token akunmu ke petugas atau scan QR mitra, 4) Timbang dan foto bukti setoran. Petugas akan memvalidasi dan poinmu langsung masuk!';
     }
 
-    // 6. Hadiah / Redeem / Tukar
+    // 7. Hadiah / Redeem / Tukar
     if (q.includes('klaim') || q.includes('hadiah') || q.includes('reward') || q.includes('tukar poin') || q.includes('redeem')) {
       return 'Untuk menukar hadiah: Buka menu Tukar Poin / Hadiah, pilih voucher atau merchandise yang kamu inginkan, lalu klik Tukar. Pengajuan penukaran akan diverifikasi oleh admin sebelum voucher dikirimkan.';
     }
 
-    // 7. Poin / Saldo
+    // 8. Poin / Saldo
     if (q.includes('poin') || q.includes('neuropoints') || q.includes('saldo') || q.includes('np')) {
       return `Saldo NeuroPoints kamu saat ini adalah ${userData.points.toLocaleString()} NP. Kamu bisa dapat poin dari: scan deteksi AI sampah, setor sampah ke bank sampah, dan menyelesaikan misi harian!`;
     }
 
-    // 8. Misi Harian / Level
+    // 9. Misi Harian / Level
     if (q.includes('misi') || q.includes('level') || q.includes('streak')) {
       return `Level kamu saat ini: "${userData.level}" dengan streak ${userData.streak} hari. Selesaikan misi harian di menu Misi setiap hari untuk mendapatkan bonus NeuroPoints dan menjaga streak apimu tetap menyala!`;
     }
