@@ -26,7 +26,7 @@ export { genAI };
 // Fungsi untuk memverifikasi label sampah menggunakan Gemini
 export async function verifyWasteLabel(base64Image: string, detectedLabel: string): Promise<string | null> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
     const prompt = `Apakah label "${detectedLabel}" tepat untuk gambar ini? Berikan nama kategori sampah yang paling tepat dalam Bahasa Indonesia, satu kata saja. Jika tidak cocok, beri label yang lebih sesuai.`;
     const result = await model.generateContent([
@@ -73,9 +73,9 @@ export interface WasteAnalysis {
 }
 
 const IMAGE_ANALYSIS_MODELS = [
-  "gemini-3-flash-preview",
-  "gemini-3.8-flash",
+  "gemini-3.5-flash-lite",
   "gemini-flash-latest",
+  "gemini-3.8-flash",
 ];
 
 let localVisionModelPromise: Promise<any> | null = null;

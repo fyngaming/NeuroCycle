@@ -5560,6 +5560,7 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
 
     // Model cepat berurutan
     const FALLBACK_MODELS = [
+      'gemini-3.5-flash-lite',
       'gemini-flash-latest',
       'gemini-3.5-flash',
       'gemini-3.7-flash',
