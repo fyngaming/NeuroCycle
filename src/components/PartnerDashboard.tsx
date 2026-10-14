@@ -6,6 +6,15 @@ import { normalizePhotoUrl } from '../lib/photoUrl';
 import PartnerTransactionSubmit from './PartnerTransactionSubmit';
 
 const uploadToImgBB = async (blob: Blob): Promise<string> => {
+  const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_IMGBB_API_KEY') {
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(blob);
+    });
+  }
   const formData = new FormData();
   formData.append('image', blob);
   const res = await fetch(
@@ -13,7 +22,14 @@ const uploadToImgBB = async (blob: Blob): Promise<string> => {
     { method: 'POST', body: formData }
   );
   const json = await res.json();
-  if (!json.success || !json.data?.url) throw new Error('ImgBB upload gagal');
+  if (!json.success || !json.data?.url) {
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(blob);
+    });
+  }
   return normalizePhotoUrl(json.data.url);
 };
 import { WifiOff, RefreshCw, Loader2, Award, Clock, ShieldAlert, Check, AlertTriangle, X, Plus } from 'lucide-react';

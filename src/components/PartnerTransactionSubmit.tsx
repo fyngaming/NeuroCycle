@@ -4,20 +4,33 @@ import { db } from '../lib/firebase';
 import { normalizePhotoUrl } from '../lib/photoUrl';
 import { logError } from '../lib/errorLogger';
 
+const blobToDataURL = (blob: Blob | File): Promise<string> =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve((reader.result as string) || '');
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(blob);
+  });
+
 const uploadToImgBB = async (file: Blob | File): Promise<string> => {
   const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
-  if (!apiKey) throw new Error('VITE_IMGBB_API_KEY belum disetel di environment (Vercel).');
-  const formData = new FormData();
-  formData.append('image', file);
-  const res = await fetch(
-    `https://api.imgbb.com/1/upload?key=${apiKey}`,
-    { method: 'POST', body: formData }
-  );
-  const json = await res.json();
-  if (!json.success || !json.data?.url) {
-    throw new Error('ImgBB upload gagal: ' + (json?.error?.message || JSON.stringify(json).slice(0, 160)));
+  if (apiKey && apiKey.trim() !== '' && apiKey !== 'YOUR_IMGBB_API_KEY') {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(
+        `https://api.imgbb.com/1/upload?key=${apiKey}`,
+        { method: 'POST', body: formData }
+      );
+      const json = await res.json();
+      if (json.success && json.data?.url) {
+        return normalizePhotoUrl(json.data.url);
+      }
+    } catch (e) {
+      console.warn('Upload ImgBB gagal, beralih ke penyimpanan terkompresi:', e);
+    }
   }
-  return normalizePhotoUrl(json.data.url);
+  return await blobToDataURL(file);
 };
 
 import { Loader2, Camera as CameraIcon, AlertTriangle, Check, Wifi, WifiOff, FileImage, Zap, QrCode, X } from 'lucide-react';

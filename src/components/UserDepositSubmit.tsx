@@ -5,6 +5,15 @@ import { normalizePhotoUrl } from '../lib/photoUrl';
 import { logError } from '../lib/errorLogger';
 
 const uploadToImgBB = async (file: File): Promise<string> => {
+  const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_IMGBB_API_KEY') {
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  }
   const formData = new FormData();
   formData.append('image', file);
   const res = await fetch(
