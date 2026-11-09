@@ -513,11 +513,12 @@ const EducationList = ({ onBack, onSelectArticle }: {
   );
 };
 
-const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveUserData, onShowQR, onShowPartner, onShowPartnerTx, onShowUserDeposit }: {
+const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onClearAllHistory, saveUserData, onShowQR, onShowPartner, onShowPartnerTx, onShowUserDeposit }: {
   userData: UserData,
   onPointsClick: () => void,
   onBack: () => void,
   onDeleteHistory: (id: string) => void,
+  onClearAllHistory?: () => void,
   saveUserData: (data: UserData) => void,
   onShowQR: () => void,
   onShowPartner: () => void,
@@ -701,8 +702,19 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
             exit={{ opacity: 0, x: 10 }}
             className="space-y-6"
           >
-            <div className="flex items-center justify-between">
-              <h3 className="font-display font-bold text-stone-800">Riwayat Scan</h3>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-bold text-stone-800">Riwayat Scan</h3>
+                {filteredScanHistory.length > 0 && onClearAllHistory && (
+                  <button
+                    onClick={onClearAllHistory}
+                    className="text-[10px] text-red-500 hover:text-red-700 font-bold bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-100 transition-colors"
+                    title="Hapus semua riwayat scan"
+                  >
+                    Hapus Semua
+                  </button>
+                )}
+              </div>
               <div className="flex gap-1.5">
                 <input
                   type="number" placeholder="DD" value={filterDay}
@@ -748,10 +760,10 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
                         e.stopPropagation();
                         onDeleteHistory(item.id);
                       }}
-                      className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100"
-                      title="Hapus riwayat"
+                      className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-all shrink-0 active:scale-95"
+                      title="Hapus riwayat ini"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </motion.div>
                 ))
@@ -6733,6 +6745,11 @@ const ReadingTimer = ({
     saveUserData({ ...userData, scanHistory: newHistory });
   };
 
+  const clearAllScanHistory = () => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus semua riwayat scan sampah? Tindakan ini tidak dapat dibatalkan.")) return;
+    saveUserData({ ...userData, scanHistory: [] });
+  };
+
   const resetScanner = () => {
     setResult(null);
     setScannedImage(null);
@@ -7427,6 +7444,7 @@ const ReadingTimer = ({
           <UserDashboard
             userData={userData}
             onDeleteHistory={deleteHistory}
+            onClearAllHistory={clearAllScanHistory}
             onPointsClick={() => setState('redemption')}
             onBack={() => setState('main')}
             saveUserData={saveUserData}
