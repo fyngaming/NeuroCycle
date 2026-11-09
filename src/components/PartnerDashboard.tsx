@@ -32,7 +32,7 @@ const uploadToImgBB = async (blob: Blob): Promise<string> => {
   }
   return normalizePhotoUrl(json.data.url);
 };
-import { WifiOff, RefreshCw, Loader2, Award, Clock, ShieldAlert, Check, AlertTriangle, X, Plus } from 'lucide-react';
+import { WifiOff, RefreshCw, Loader2, Award, Clock, ShieldAlert, Check, AlertTriangle, X, Plus, Eye } from 'lucide-react';
 
 const WASTE_CATEGORIES = [
   { id: 'plastik', name: 'Plastik', pointsPerKg: 1000 },
@@ -81,6 +81,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
   } | null>(null);
   const [approvingTxId, setApprovingTxId] = useState<string | null>(null);
   const [showAddTx, setShowAddTx] = useState(false);
+  const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<{ image: string; title: string; user?: string } | null>(null);
 
   useEffect(() => {
     if (!partnerId && !uid) return;
@@ -302,7 +303,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
           totalPoints,
           totalWeight,
           status: 'Approved',
-          image: tx.photoUrl && !tx.photoUrl.startsWith('data:') ? tx.photoUrl : '',
+          image: tx.photoUrl || tx.image || '',
           location: partner?.name || 'Bank Sampah Partner',
           userEmail: uData.email || '',
           userUid
@@ -380,7 +381,7 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
           totalPoints: 0,
           totalWeight: finalWeight,
           status: 'Rejected',
-          image: tx.photoUrl && !tx.photoUrl.startsWith('data:') ? tx.photoUrl : '',
+          image: tx.photoUrl || tx.image || '',
           location: partner?.name || 'Bank Sampah Partner',
           userEmail: uData.email || '',
           userUid
@@ -677,29 +678,49 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
                      const isApproved = tx.status === 'approved';
                      const isRejected = tx.status === 'rejected';
                      const canConfirm = tx.status === 'pending' || isFlagged;
+                     const rawPhoto = tx.photoUrl || tx.image || tx.proofImage || tx.photo;
+                     const proofPhoto = rawPhoto ? normalizePhotoUrl(rawPhoto) : null;
 
                      return (
-                       <div key={tx.id} className="p-4 border border-stone-100 hover:border-stone-200 transition-colors bg-white rounded-3xl flex justify-between items-center">
-                         <div className="flex items-center gap-4">
-                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                             isApproved ? 'bg-emerald-50 text-emerald-600' :
-                             isFlagged ? 'bg-red-50 text-red-600' :
-                             'bg-stone-50 text-stone-600'
-                           }`}>
-                             {isApproved ? <Award size={18} /> : isFlagged ? <ShieldAlert size={18} /> : <Clock size={18} />}
-                           </div>
-                           <div>
+                       <div key={tx.id} className="p-4 border border-stone-100 hover:border-stone-200 transition-colors bg-white rounded-3xl flex justify-between items-center gap-4">
+                         <div className="flex items-center gap-3 min-w-0">
+                           {proofPhoto ? (
+                             <button
+                               type="button"
+                               onClick={() => setSelectedPhotoPreview({
+                                 image: proofPhoto,
+                                 title: `Bukti Setoran: ${tx.category || 'Sampah'}`,
+                                 user: tx.userName || tx.userToken
+                               })}
+                               className="w-12 h-12 rounded-2xl overflow-hidden border border-stone-200 shrink-0 hover:scale-105 hover:shadow-md transition-all group/img relative"
+                               title="Klik untuk memperbesar bukti foto"
+                             >
+                               <img src={proofPhoto} alt="Bukti" className="w-full h-full object-cover" />
+                               <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                 <Eye size={16} />
+                                </div>
+                             </button>
+                           ) : (
+                             <div className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center ${
+                               isApproved ? 'bg-emerald-50 text-emerald-600' :
+                               isFlagged ? 'bg-red-50 text-red-600' :
+                               'bg-stone-50 text-stone-600'
+                             }`}>
+                               {isApproved ? <Award size={20} /> : isFlagged ? <ShieldAlert size={20} /> : <Clock size={20} />}
+                             </div>
+                           )}
+                           <div className="min-w-0">
                              {tx.items && tx.items.length > 1 ? (
                                <div>
-                                 <p className="font-bold text-stone-800 text-sm capitalize">{tx.category || 'Campuran'}</p>
-                                 <p className="text-[10px] text-stone-400 mt-0.5">
+                                 <p className="font-bold text-stone-800 text-sm capitalize truncate">{tx.category || 'Campuran'}</p>
+                                 <p className="text-[10px] text-stone-400 mt-0.5 truncate">
                                    {tx.items.map((i: any) => `${i.category || i.name}: ${i.weight}kg`).join(' · ')}
                                  </p>
                                </div>
                              ) : (
-                               <p className="font-bold text-stone-800 text-sm capitalize">{tx.category} · {tx.weight} kg</p>
+                               <p className="font-bold text-stone-800 text-sm capitalize truncate">{tx.category} · {tx.weight} kg</p>
                              )}
-                             {tx.userName && <p className="text-[9px] text-stone-400 mt-0.5">User: {tx.userName}</p>}
+                             {tx.userName && <p className="text-[9px] text-stone-400 mt-0.5 truncate">User: {tx.userName}</p>}
                             <span className={`inline-block px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border mt-1 ${
                               isApproved ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                               isFlagged ? 'bg-red-50 text-red-700 border-red-100' :
@@ -744,6 +765,47 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
           onClose={() => setShowAddTx(false)}
           onDone={() => setShowAddTx(false)}
         />
+      )}
+
+      {/* Photo Preview Modal */}
+      {selectedPhotoPreview && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[130] p-4"
+          onClick={() => setSelectedPhotoPreview(null)}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl relative space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-display font-black text-lg text-stone-900">{selectedPhotoPreview.title}</h4>
+                {selectedPhotoPreview.user && (
+                  <p className="text-xs text-stone-500 font-medium">Pengguna: {selectedPhotoPreview.user}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedPhotoPreview(null)}
+                className="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center hover:bg-stone-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="w-full max-h-[60vh] rounded-2xl overflow-hidden bg-stone-900 flex items-center justify-center">
+              <img
+                src={selectedPhotoPreview.image}
+                alt="Bukti Setoran"
+                className="w-full h-full max-h-[60vh] object-contain"
+              />
+            </div>
+            <button
+              onClick={() => setSelectedPhotoPreview(null)}
+              className="w-full py-3 bg-stone-900 text-white rounded-2xl text-xs font-bold hover:bg-stone-800 transition-colors"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

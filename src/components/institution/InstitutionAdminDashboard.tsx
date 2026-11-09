@@ -811,21 +811,25 @@ export const InstitutionAdminDashboard: React.FC<InstitutionAdminDashboardProps>
 
                     {/* Bukti foto */}
                     <div>
-                      {tx.photoUrl ? (
-                        <button
-                          onClick={() => setSelectedPhotoPreview({
-                            image: tx.photoUrl,
-                            user: tx.userName || tx.userToken || 'User',
-                            title: 'Bukti Setoran',
-                            date: tx.createdAt ? new Date(tx.createdAt).toLocaleString('id-ID') : undefined
-                          })}
-                          className="w-12 h-12 rounded-xl overflow-hidden border border-stone-200 hover:opacity-80 transition-opacity block"
-                        >
-                          <img src={tx.photoUrl} alt="bukti" className="w-full h-full object-cover" />
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-stone-300 italic">Tanpa foto</span>
-                      )}
+                      {(() => {
+                        const raw = tx.photoUrl || tx.image || tx.proofImage || tx.photo;
+                        const proof = raw ? normalizePhotoUrl(raw) : null;
+                        return proof ? (
+                          <button
+                            onClick={() => setSelectedPhotoPreview({
+                              image: proof,
+                              user: tx.userName || tx.userToken || 'User',
+                              title: 'Bukti Setoran',
+                              date: tx.createdAt ? new Date(tx.createdAt).toLocaleString('id-ID') : undefined
+                            })}
+                            className="w-12 h-12 rounded-xl overflow-hidden border border-stone-200 hover:opacity-80 transition-opacity block"
+                          >
+                            <img src={proof} alt="bukti" className="w-full h-full object-cover" />
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-stone-300 italic">Tanpa foto</span>
+                        );
+                      })()}
                     </div>
 
                     {/* Tanggal */}
