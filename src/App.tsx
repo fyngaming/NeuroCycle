@@ -513,26 +513,6 @@ const EducationList = ({ onBack, onSelectArticle }: {
   );
 };
 
-const getCategorySampleImage = (name: string, category: string): string => {
-  const lower = `${name} ${category}`.toLowerCase();
-  if (lower.includes('botol') || lower.includes('plastik')) {
-    return 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80';
-  }
-  if (lower.includes('kertas') || lower.includes('kardus') || lower.includes('karton')) {
-    return 'https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=600&q=80';
-  }
-  if (lower.includes('kaleng') || lower.includes('logam') || lower.includes('besi') || lower.includes('aluminium')) {
-    return 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?auto=format&fit=crop&w=600&q=80';
-  }
-  if (lower.includes('kaca') || lower.includes('beling')) {
-    return 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=600&q=80';
-  }
-  if (lower.includes('organik') || lower.includes('daun') || lower.includes('sisa') || lower.includes('makanan')) {
-    return 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80';
-  }
-  return 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=600&q=80';
-};
-
 const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveUserData, onShowQR, onShowPartner, onShowPartnerTx, onShowUserDeposit }: {
   userData: UserData,
   onPointsClick: () => void,
@@ -743,35 +723,38 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
                   <p className="text-stone-400 text-sm italic">Belum ada riwayat scan...</p>
                 </div>
               ) : (
-                filteredScanHistory.map((item) => {
-                  const displayImage = item.image || getCategorySampleImage(item.name, item.category);
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      onClick={() => setPreviewScan(item)}
-                      className="bg-white p-4 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 group cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all"
+                filteredScanHistory.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    onClick={() => setPreviewScan(item)}
+                    className="bg-white p-4 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 group cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all"
+                  >
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-stone-50 text-stone-400">
+                          <Camera size={22} className="opacity-40" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-stone-800 text-sm truncate group-hover:text-emerald-700 transition-colors">{item.name}</h4>
+                      <p className="text-[9px] text-stone-500 font-medium">{item.date}</p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteHistory(item.id);
+                      }}
+                      className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100"
+                      title="Hapus riwayat"
                     >
-                      <div className="w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
-                        <img src={displayImage} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-stone-800 text-sm truncate group-hover:text-emerald-700 transition-colors">{item.name}</h4>
-                        <p className="text-[9px] text-stone-500 font-medium">{item.date}</p>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteHistory(item.id);
-                        }}
-                        className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100"
-                        title="Hapus riwayat"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </motion.div>
-                  );
-                })
+                      <Trash2 size={16} />
+                    </button>
+                  </motion.div>
+                ))
               )}
             </div>
           </motion.div>
@@ -967,20 +950,17 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
               </div>
 
               <div className="w-full h-52 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 flex items-center justify-center relative shadow-inner">
-                {(() => {
-                  const previewImage = previewScan.image || getCategorySampleImage(previewScan.name, previewScan.category);
-                  const isSample = !previewScan.image;
-                  return (
-                    <>
-                      <img src={previewImage} alt={previewScan.name} className="w-full h-full object-cover" />
-                      {isSample && (
-                        <div className="absolute bottom-2 left-2 right-2 bg-stone-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl text-center">
-                          <p className="text-[10px] text-stone-200 font-semibold">📷 Foto Representatif Kategori (Scan Terdahulu)</p>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+                {previewScan.image ? (
+                  <img src={previewScan.image} alt={previewScan.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-stone-400 gap-2 p-4 text-center">
+                    <Camera size={36} className="text-stone-300" />
+                    <p className="text-xs text-stone-500 font-bold">Foto Asli Tidak Tersimpan di Server</p>
+                    <p className="text-[10px] text-stone-400 max-w-xs leading-relaxed">
+                      Pada versi aplikasi 14 Oktober 2026, foto tidak disimpan ke database untuk mencegah limit kuota Firestore.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>
