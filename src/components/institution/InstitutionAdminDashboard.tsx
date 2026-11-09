@@ -358,8 +358,8 @@ export const InstitutionAdminDashboard: React.FC<InstitutionAdminDashboardProps>
     <div className="min-h-screen bg-stone-50">
       <div className="bg-stone-900 text-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/10 p-1 rounded-xl border border-white/20 flex items-center justify-center overflow-hidden">
-            <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain" />
+          <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
           </div>
           <div>
             <h1 className="text-xl font-display font-black">Institution Admin Dashboard</h1>

@@ -199,8 +199,8 @@ const AboutScreen = ({ onBack }: { onBack: () => void }) => (
       </button>
     </header>
     <div className="bg-white rounded-[40px] p-8 border border-stone-100 shadow-sm space-y-4">
-      <div className="w-20 h-20 p-2 bg-emerald-50 border border-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
-        <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain rounded-2xl" />
+      <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
+        <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)]" />
       </div>
       <h3 className="text-xl font-display font-bold text-stone-900 text-center">NeuroCycle</h3>
       <p className="text-sm text-stone-500 text-center leading-relaxed">
@@ -2215,8 +2215,14 @@ const LoginScreen = ({ onGoogleLogin, onAdminLogin, onSuperAdminLogin, onInstAdm
 
       <div className="relative z-10 w-full max-w-md flex flex-col items-center py-8">
         {/* Logo */}
-        <div className="w-24 h-24 p-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-4xl flex items-center justify-center shadow-2xl shadow-emerald-500/20 mb-6">
-          <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain rounded-3xl" />
+        <div className="relative mb-6 group">
+          {/* Subtle soft dark & green glow behind the emblem */}
+          <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-2xl scale-110 pointer-events-none" />
+          <img
+            src="/logo_NeuroCycle.png"
+            alt="NeuroCycle Logo"
+            className="w-28 h-28 object-contain relative z-10 transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_12px_24px_rgba(0,0,0,0.65)]"
+          />
         </div>
 
         <h1 className="text-4xl font-display font-black text-center mb-3 text-emerald-50">NeuroCycle</h1>
@@ -3386,8 +3392,8 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       <header className="bg-white border-b border-stone-200 p-6 sticky top-0 z-100">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-1 border border-stone-200 shadow-sm overflow-hidden">
-              <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain" />
+            <div className="w-12 h-12 flex items-center justify-center shrink-0">
+              <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)]" />
             </div>
             <div>
               <h1 className="text-xl font-display font-black text-stone-900 tracking-tight">NeuroCycle Admin</h1>
@@ -6819,8 +6825,8 @@ const ReadingTimer = ({
             {/* Header */}
             <div className="flex items-center justify-between mb-8 relative">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center p-1 border border-emerald-100 overflow-hidden">
-                  <img src="/logo_NeuroCycle.png" alt="NeuroCycle" className="w-full h-full object-contain" />
+                <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                  <img src="/logo_NeuroCycle.png" alt="NeuroCycle" className="w-full h-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)]" />
                 </div>
                 <div>
                   <h1 className="text-xl font-display font-bold text-emerald-900 leading-tight">Halo!</h1>

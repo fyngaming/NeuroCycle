@@ -469,7 +469,9 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
 
         <div className="flex items-center justify-between mb-6 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 p-1 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-center overflow-hidden"><img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain" /></div>
+            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+              <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+            </div>
             <div>
             <h3 className="font-display font-black text-2xl text-stone-900">Dashboard Partner</h3>
               <p className="text-stone-400 text-xs mt-1">Status Operasional & Riwayat Transaksi</p>
