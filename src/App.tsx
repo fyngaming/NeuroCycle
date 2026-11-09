@@ -3294,8 +3294,14 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     return registeredPartnerNames.some(name => name && d.location && d.location.includes(name));
   });
 
-  // manualDeposits: semua deposit yang BUKAN dari partner terdaftar (termasuk data lama)
-  const manualDeposits = allDeposits.filter(d => !partnerDeposits.some(pd => pd.id === d.id));
+  // manualDeposits: hanya setoran manual yang memiliki bukti foto sah dan berstatus valid
+  const manualDeposits = allDeposits.filter(d => {
+    const isFromPartner = partnerDeposits.some(pd => pd.id === d.id);
+    if (isFromPartner) return false;
+    // Wajib ada foto bukti (bukan draf lama / tanpa foto)
+    const hasPhoto = !!(d.image || d.photoUrl);
+    return hasPhoto;
+  });
   const partnerActivityRows = transactions
     .filter((tx: any) => tx.partnerUid || tx.partnerId)
     .map((tx: any) => {
