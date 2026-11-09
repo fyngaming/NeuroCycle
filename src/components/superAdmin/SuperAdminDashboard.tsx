@@ -213,9 +213,14 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   return (
     <div className="min-h-screen bg-stone-50">
       <div className="bg-stone-900 text-white px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-display font-black">Super Admin Dashboard</h1>
-          <p className="text-stone-400 text-xs">Kelola seluruh platform NeuroCycle</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/10 p-1 rounded-xl border border-white/20 flex items-center justify-center overflow-hidden">
+            <img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <h1 className="text-xl font-display font-black">Super Admin Dashboard</h1>
+            <p className="text-stone-400 text-xs">Kelola seluruh platform NeuroCycle</p>
+          </div>
         </div>
         <button onClick={onLogout} className="px-4 py-2 bg-red-600 rounded-xl text-xs font-bold hover:bg-red-700 transition-colors">Logout</button>
       </div>

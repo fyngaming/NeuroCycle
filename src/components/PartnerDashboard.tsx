@@ -468,9 +468,12 @@ const PartnerDashboard = ({ uid, partnerId, onClose }: { uid?: string; partnerId
         <div className="absolute top-0 left-0 right-0 h-2 bg-linear-to-r from-emerald-500 to-teal-500" />
 
         <div className="flex items-center justify-between mb-6 shrink-0">
-          <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 p-1 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-center overflow-hidden"><img src="/logo_NeuroCycle.png" alt="NeuroCycle Logo" className="w-full h-full object-contain" /></div>
+            <div>
             <h3 className="font-display font-black text-2xl text-stone-900">Dashboard Partner</h3>
-            <p className="text-stone-400 text-xs mt-1">Status Operasional & Riwayat Transaksi</p>
+              <p className="text-stone-400 text-xs mt-1">Status Operasional & Riwayat Transaksi</p>
+            </div>
           </div>
           <button onClick={onClose} className="p-2 bg-stone-50 rounded-xl text-stone-400 hover:text-stone-600">Tutup</button>
         </div>
