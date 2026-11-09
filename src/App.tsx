@@ -532,6 +532,7 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
   const [isPartner, setIsPartner] = useState(false);
   const [partnerDoc, setPartnerDoc] = useState<any>(null);
+  const [previewScan, setPreviewScan] = useState<ScanHistoryItem | null>(null);
 
   useEffect(() => {
     if (!userData.uid) return;
@@ -727,22 +728,30 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
                   <motion.div
                     key={item.id}
                     layout
-                    className="bg-white p-4 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 group"
+                    onClick={() => setPreviewScan(item)}
+                    className="bg-white p-4 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 group cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all"
                   >
                     <div className="w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
                       {item.image ? (
-                        <img src={item.image} className="w-full h-full object-cover" />
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-400"><Trash2 size={24} /></div>
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-emerald-50/80 text-emerald-600">
+                          <Recycle size={20} />
+                          <span className="text-[8px] font-black uppercase tracking-wider text-emerald-700 mt-0.5">Scan</span>
+                        </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-stone-800 text-sm truncate">{item.name}</h4>
+                      <h4 className="font-bold text-stone-800 text-sm truncate group-hover:text-emerald-700 transition-colors">{item.name}</h4>
                       <p className="text-[9px] text-stone-500 font-medium">{item.date}</p>
                     </div>
                     <button
-                      onClick={() => onDeleteHistory(item.id)}
-                      className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteHistory(item.id);
+                      }}
+                      className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100"
+                      title="Hapus riwayat"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -909,6 +918,79 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, saveU
                 ))
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Detail Riwayat Scan */}
+      <AnimatePresence>
+        {previewScan && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setPreviewScan(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-[32px] p-6 max-w-sm w-full shadow-2xl space-y-4 border border-stone-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                  {previewScan.category || 'Hasil Scan AI'}
+                </span>
+                <button
+                  onClick={() => setPreviewScan(null)}
+                  className="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center hover:bg-stone-200 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="w-full h-52 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 flex items-center justify-center relative shadow-inner">
+                {previewScan.image ? (
+                  <img src={previewScan.image} alt={previewScan.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-stone-400 gap-2 p-4 text-center">
+                    <Recycle size={36} className="text-emerald-500" />
+                    <p className="text-xs text-stone-400 font-medium">Foto riwayat lama tidak tersimpan</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="font-display font-black text-lg text-stone-800 leading-snug">{previewScan.name}</h3>
+                <p className="text-xs text-stone-400 mt-1">{previewScan.date}</p>
+              </div>
+
+              {previewScan.impact && (
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-stone-100 text-center">
+                  <div className="bg-emerald-50/70 p-2.5 rounded-2xl border border-emerald-100/50">
+                    <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wider">CO2 Hemat</p>
+                    <p className="text-xs font-black text-emerald-700 mt-0.5">{previewScan.impact.co2} kg</p>
+                  </div>
+                  <div className="bg-blue-50/70 p-2.5 rounded-2xl border border-blue-100/50">
+                    <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wider">Air Hemat</p>
+                    <p className="text-xs font-black text-blue-700 mt-0.5">{previewScan.impact.water} L</p>
+                  </div>
+                  <div className="bg-amber-50/70 p-2.5 rounded-2xl border border-amber-100/50">
+                    <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wider">Energi</p>
+                    <p className="text-xs font-black text-amber-700 mt-0.5">{previewScan.impact.energy} kWh</p>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => setPreviewScan(null)}
+                className="w-full py-3 bg-stone-900 text-white text-xs font-black uppercase tracking-wider rounded-2xl hover:bg-stone-800 transition-colors shadow-lg shadow-stone-900/10"
+              >
+                Tutup
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -6435,6 +6517,38 @@ const ReadingTimer = ({
     });
   };
 
+  const createThumbnail = (base64Str: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const SIZE = 160;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > SIZE) {
+            height = Math.round((height * SIZE) / width);
+            width = SIZE;
+          }
+        } else {
+          if (height > SIZE) {
+            width = Math.round((width * SIZE) / height);
+            height = SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.70));
+      };
+      img.onerror = () => resolve(base64Str);
+    });
+  };
+
   const handleImageInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -6454,6 +6568,7 @@ const ReadingTimer = ({
       setProgressMsg('Mengoptimalkan gambar...');
       const compressedBase64 = await compressImage(originalBase64);
       setScannedImage(compressedBase64);
+      const thumbnailBase64 = await createThumbnail(compressedBase64);
 
       const pureBase64 = compressedBase64.split(',')[1];
 
@@ -6504,7 +6619,7 @@ const ReadingTimer = ({
           water: analysis.impactStats.waterSaved,
           energy: analysis.impactStats.energySaved,
         },
-        image: ''
+        image: thumbnailBase64
       };
 
       const existingRecordIdx = userData.history.findIndex(h => h.date === todayFormatted);
