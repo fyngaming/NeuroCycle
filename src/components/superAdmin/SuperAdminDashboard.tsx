@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Lock, Copy } from 'lucide-react';
+import { Lock, Copy, Award, Trophy } from 'lucide-react';
 import LeaderboardRewardSettings from '../admin/LeaderboardRewardSettings';
 import { db } from '../../lib/firebase';
 import { normalizePhotoUrl } from '../../lib/photoUrl';
@@ -18,7 +18,7 @@ interface SuperAdminDashboardProps {
 }
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'institutions' | 'partners' | 'users' | 'user_assignments' | 'transactions' | 'error_logs' | 'inst_passwords' | 'leaderboard_rewards'>('institutions');
+  const [activeTab, setActiveTab] = useState<'institutions' | 'partners' | 'users' | 'user_assignments' | 'transactions' | 'leaderboard_claims' | 'error_logs' | 'inst_passwords' | 'leaderboard_rewards'>('institutions');
   const [institutions, setInstitutions] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -36,6 +36,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   const [txSearch, setTxSearch] = useState('');
   const [txPage, setTxPage] = useState(1);
   const txPerPage = 20;
+
+  const [claimSearch, setClaimSearch] = useState('');
+  const [claimPage, setClaimPage] = useState(1);
+  const claimPerPage = 20;
 
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(1);
@@ -57,11 +61,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     const unsub4 = onSnapshot(collection(db, 'transactions'), (snap) => {
-      const validTxs = snap.docs
+      const allTxs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '')
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setTransactions(validTxs);
+        .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      setTransactions(allTxs);
     });
     const unsub5 = onSnapshot(collection(db, 'errorLogs'), (snap) => {
       const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -158,9 +161,53 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     }
   };
 
+  // Helper identifikasi reward leaderboard
+  const isLeaderboardReward = (tx: any) => {
+    return (
+      tx.type === 'leaderboard_reward' ||
+      tx.photoUrl === 'leaderboard_reward_badge' ||
+      (typeof tx.partnerName === 'string' && tx.partnerName.toLowerCase().includes('hadiah juara')) ||
+      Boolean(tx.isLeaderboardBadge)
+    );
+  };
+
+  // Helper pencocokan user penerima secara akurat
+  const resolveTxUser = (tx: any, userList: any[]) => {
+    const matched = userList.find((u: any) =>
+      (tx.userUid && (u.uid === tx.userUid || u.id === tx.userUid)) ||
+      (tx.userEmail && u.email && u.email.toLowerCase() === tx.userEmail.toLowerCase()) ||
+      (tx.userToken && (u.qrToken === tx.userToken || u.uid === tx.userToken))
+    );
+    const email = tx.userEmail || matched?.email || '';
+    const name = tx.userName || tx.userDisplayName || matched?.displayName || (email ? email.split('@')[0] : 'User');
+    return { email, name, matched };
+  };
+
+  // Format tanggal & waktu aktivitas
+  const formatActivityDate = (dateString?: string) => {
+    if (!dateString) return { date: '-', time: '' };
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return { date: '-', time: '' };
+      return {
+        date: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+        time: d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB'
+      };
+    } catch {
+      return { date: '-', time: '' };
+    }
+  };
+
   // ─── Filtered & Paginated Collections ─────────────────────────────
+  // 1. Tab Semua Transaksi: Murni setoran fisik dari mitra, tanpa klaim hadiah leaderboard
   const filteredTransactions = useMemo(() => {
-    const validTransactions = transactions.filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '');
+    const validTransactions = transactions.filter((tx: any) =>
+      !isLeaderboardReward(tx) &&
+      tx.photoUrl &&
+      tx.photoUrl !== 'leaderboard_reward_badge' &&
+      typeof tx.photoUrl === 'string' &&
+      tx.photoUrl.trim() !== ''
+    );
     if (!txSearch.trim()) return validTransactions;
     const q = txSearch.toLowerCase();
     return validTransactions.filter(tx => 
@@ -177,6 +224,33 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     const start = (txPage - 1) * txPerPage;
     return filteredTransactions.slice(start, start + txPerPage);
   }, [filteredTransactions, txPage, txPerPage]);
+
+  // 2. Tab Klaim Hadiah: Khusus riwayat klaim hadiah juara leaderboard
+  const leaderboardClaims = useMemo(() => {
+    return transactions.filter(tx => isLeaderboardReward(tx));
+  }, [transactions]);
+
+  const filteredLeaderboardClaims = useMemo(() => {
+    if (!claimSearch.trim()) return leaderboardClaims;
+    const q = claimSearch.toLowerCase();
+    return leaderboardClaims.filter(tx => {
+      const user = resolveTxUser(tx, users);
+      return (
+        user.name.toLowerCase().includes(q) ||
+        user.email.toLowerCase().includes(q) ||
+        (tx.partnerName && tx.partnerName.toLowerCase().includes(q)) ||
+        (tx.category && tx.category.toLowerCase().includes(q)) ||
+        (tx.categoryLabel && tx.categoryLabel.toLowerCase().includes(q)) ||
+        (tx.status && tx.status.toLowerCase().includes(q))
+      );
+    });
+  }, [leaderboardClaims, claimSearch, users]);
+
+  const totalClaimPages = Math.max(1, Math.ceil(filteredLeaderboardClaims.length / claimPerPage));
+  const paginatedLeaderboardClaims = useMemo(() => {
+    const start = (claimPage - 1) * claimPerPage;
+    return filteredLeaderboardClaims.slice(start, start + claimPerPage);
+  }, [filteredLeaderboardClaims, claimPage, claimPerPage]);
 
   const filteredUsers = useMemo(() => {
     if (!userSearch.trim()) return users;
@@ -329,13 +403,19 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
             { id: 'users', label: 'Users' },
             { id: 'user_assignments', label: 'Kelola User' },
             { id: 'transactions', label: 'Transactions' },
+            { id: 'leaderboard_claims', label: 'Klaim Hadiah' },
             { id: 'error_logs', label: 'Error Logs' },
             { id: 'inst_passwords', label: 'Password Institusi' },
-            { id: 'leaderboard_rewards', label: '🏆 Hadiah Leaderboard' },
+            { id: 'leaderboard_rewards', label: 'Hadiah Leaderboard' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
+              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap cursor-pointer transition-all ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'}`}>
               {tab.label}
+              {tab.id === 'leaderboard_claims' && leaderboardClaims.length > 0 && (
+                <span className="ml-1.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                  {leaderboardClaims.length}
+                </span>
+              )}
               {tab.id === 'error_logs' && stats.totalErrors > 0 && (
                 <span className="ml-1.5 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
                   {stats.totalErrors}
@@ -969,6 +1049,137 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                     disabled={txPage >= totalTxPages}
                     onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))}
                     className="px-3 py-1.5 rounded-lg border border-stone-200 disabled:opacity-40 hover:bg-stone-50 transition-colors"
+                  >
+                    Selanjutnya
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'leaderboard_claims' && (
+          <div className="bg-white rounded-3xl border border-stone-100 overflow-hidden shadow-xs">
+            <div className="p-6 border-b border-stone-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-display font-black text-stone-900">Klaim Hadiah Leaderboard</h3>
+                <p className="text-xs text-stone-500 mt-1">Riwayat seluruh klaim poin penghargaan juara leaderboard ekosistem</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Cari user, email, atau juara..."
+                  value={claimSearch}
+                  onChange={(e) => { setClaimSearch(e.target.value); setClaimPage(1); }}
+                  className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 text-xs outline-none focus:ring-2 focus:ring-stone-400 w-full md:w-64"
+                />
+                <span className="text-xs font-black text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl whitespace-nowrap">
+                  {filteredLeaderboardClaims.length} klaim
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-stone-50 border-b border-stone-100">
+                  <tr>
+                    <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Pengguna</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Aktivitas</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Tanggal & Waktu</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Mutasi Poin</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100 text-sm">
+                  {paginatedLeaderboardClaims.map((tx: any) => {
+                    const user = resolveTxUser(tx, users);
+                    const dateInfo = formatActivityDate(tx.createdAt);
+                    const points = tx.totalPoints || tx.points || 0;
+
+                    return (
+                      <tr key={tx.id} className="hover:bg-stone-50/80 transition-colors">
+                        {/* Pengguna */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 uppercase">
+                              {(user.name || user.email || 'U').substring(0, 2)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-stone-900 text-xs sm:text-sm truncate max-w-[200px]">{user.name}</p>
+                              <p className="text-[10px] text-stone-400 truncate max-w-[200px]">{user.email || '-'}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Aktivitas */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0 shadow-xs">
+                              <Award size={18} className="text-amber-500" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-[9px] font-black uppercase tracking-widest block text-amber-600">
+                                Reward Leaderboard
+                              </span>
+                              <p className="font-bold text-stone-900 text-xs sm:text-sm truncate max-w-[240px]">
+                                {tx.partnerName || 'Hadiah Juara Leaderboard'}
+                              </p>
+                              <p className="text-[10px] text-stone-500 font-medium truncate max-w-[240px]">
+                                {tx.categoryLabel || tx.category || 'Pemenang Papan Peringkat'}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Tanggal & Waktu */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <p className="font-bold text-stone-800 text-xs">{dateInfo.date}</p>
+                          <p className="text-[10px] text-stone-400">{dateInfo.time}</p>
+                        </td>
+
+                        {/* Mutasi Poin */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-black text-emerald-600">
+                            +{points.toLocaleString()} NP
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border bg-emerald-100 text-emerald-700 border-emerald-200">
+                            Diterima
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {paginatedLeaderboardClaims.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-stone-400 text-sm">
+                        Tidak ada riwayat klaim hadiah leaderboard yang ditemukan.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls Klaim Hadiah */}
+            {totalClaimPages > 1 && (
+              <div className="p-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
+                <span>Halaman {claimPage} dari {totalClaimPages} ({filteredLeaderboardClaims.length} total)</span>
+                <div className="flex gap-2">
+                  <button
+                    disabled={claimPage <= 1}
+                    onClick={() => setClaimPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-lg border border-stone-200 disabled:opacity-40 hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    Sebelumnya
+                  </button>
+                  <button
+                    disabled={claimPage >= totalClaimPages}
+                    onClick={() => setClaimPage(p => Math.min(totalClaimPages, p + 1))}
+                    className="px-3 py-1.5 rounded-lg border border-stone-200 disabled:opacity-40 hover:bg-stone-50 transition-colors cursor-pointer"
                   >
                     Selanjutnya
                   </button>
