@@ -108,6 +108,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
     // Filter dan deduplikasi pengguna unik berdasarkan nama tampilan & identitas
     const userMap = new Map<string, any>();
+    const uidToDedupeKey = new Map<string, string>();
 
     allUsers.forEach(u => {
       const email = (u.email || '').toLowerCase().trim();
@@ -122,6 +123,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       }
 
       if (!dedupeKey) return;
+      if (u.uid) {
+        uidToDedupeKey.set(u.uid, dedupeKey);
+      }
 
       const existing = userMap.get(dedupeKey);
       if (!existing) {
@@ -224,7 +228,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       const userQuizMap = new Map<string, { completedCount: number; totalScore: number }>();
       quizProgressList.forEach(p => {
         if (!p.userId) return;
-        const prev = userQuizMap.get(p.userId) || { completedCount: 0, totalScore: 0 };
+        const targetKey = uidToDedupeKey.get(p.userId) || p.userId;
+        const prev = userQuizMap.get(targetKey) || { completedCount: 0, totalScore: 0 };
         const isDone = Boolean(p.completed || p.quizScore !== undefined || p.claimed);
         if (!isDone) return;
 
@@ -245,14 +250,15 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           pts = reward;
         }
 
-        userQuizMap.set(p.userId, {
+        userQuizMap.set(targetKey, {
           completedCount: prev.completedCount + 1,
           totalScore: prev.totalScore + pts
         });
       });
 
       entries = dedupedUsers.map(u => {
-        const qStats = userQuizMap.get(u.uid) || { completedCount: 0, totalScore: 0 };
+        const targetKey = uidToDedupeKey.get(u.uid) || u.uid;
+        const qStats = userQuizMap.get(targetKey) || { completedCount: 0, totalScore: 0 };
         return {
           uid: u.uid,
           displayName: u.displayName || u.email?.split('@')[0] || 'Pemilah',
@@ -430,7 +436,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               <h2 className="text-xl font-display font-black text-stone-900 flex items-center gap-2">
                 Papan Peringkat <Trophy size={20} className="text-amber-500 fill-amber-400" />
               </h2>
-              <p className="text-[11px] text-stone-500 font-medium">Prestasi Pemilah Sampah Komunitas</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-[11px] text-stone-500 font-medium">Prestasi Pemilah Sampah Komunitas</p>
+                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                  Live Sync
+                </span>
+              </div>
             </div>
           </div>
 

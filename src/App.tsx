@@ -3343,7 +3343,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [resetPasswordTarget, setResetPasswordTarget] = useState<{ uid: string; name: string; email: string; role: string } | null>(null);
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState('');
-  const [activityFilter, setActivityFilter] = useState<'all' | 'scan' | 'deposit' | 'claim' | 'mission'>('all');
+  const [activityFilter, setActivityFilter] = useState<'all' | 'scan' | 'deposit' | 'claim' | 'mission' | 'leaderboard_reward'>('all');
   const [activitySearchQuery, setActivitySearchQuery] = useState('');
 
   useEffect(() => {
@@ -3919,7 +3919,11 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     .filter((tx: any) => tx.partnerUid || tx.partnerId)
     .map((tx: any) => {
       const partner = partners.find((p: any) => p.ownerUid === tx.partnerUid || p.id === tx.partnerId);
-      const txUser = users.find(u => u.uid === tx.userUid || u.qrToken === tx.userToken);
+      const txUser = users.find(u => 
+        (tx.userUid && u.uid === tx.userUid) || 
+        (tx.userEmail && u.email && u.email.toLowerCase() === tx.userEmail.toLowerCase()) || 
+        (tx.userToken && u.qrToken && u.qrToken === tx.userToken)
+      );
       const historyItem = txUser?.depositHistory?.find((d: any) => d.id === tx.id);
       const categoryData = WASTE_CATEGORIES.find(c => c.id === tx.category);
       const items = tx.items || historyItem?.items || [{
@@ -3929,19 +3933,21 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       }];
       const totalWeight = tx.totalWeight || historyItem?.totalWeight || tx.weight || items.reduce((sum: number, item: any) => sum + (Number(item.weight) || 0), 0);
       const totalPoints = historyItem?.totalPoints ?? items.reduce((sum: number, item: any) => sum + (Number(item.points) || 0), 0);
+      const resolvedEmail = tx.userEmail || txUser?.email || historyItem?.userEmail || tx.userToken || '-';
+      const resolvedName = tx.userName || txUser?.displayName || (resolvedEmail !== '-' ? resolvedEmail.split('@')[0] : 'User');
       return {
         id: tx.id,
         partnerName: partner?.name || tx.partnerName || historyItem?.location || tx.partnerNameManual || 'Bank Sampah Partner',
         partnerEmail: partner?.email || '',
-        userName: txUser?.displayName || 'User',
-        userEmail: txUser?.email || historyItem?.userEmail || tx.userToken || '-',
+        userName: resolvedName,
+        userEmail: resolvedEmail,
         items,
         totalWeight,
         totalPoints,
         status: tx.status || historyItem?.status || 'pending',
         date: tx.createdAt || historyItem?.date || '',
-        image: tx.photoUrl || tx.image || tx.proofImage || tx.proofPhoto || tx.photo ||
-               historyItem?.photoUrl || historyItem?.image || historyItem?.proofImage || '',
+        image: (tx.photoUrl && tx.photoUrl !== 'leaderboard_reward_badge') ? tx.photoUrl : (tx.image || tx.proofImage || tx.proofPhoto || tx.photo ||
+               historyItem?.photoUrl || historyItem?.image || historyItem?.proofImage || ''),
         reason: tx.rejectionReason || tx.anomalyReason || ''
       };
     })
@@ -3973,13 +3979,16 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6,
       agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11
     };
-    const textMatch = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+    const textMatch = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})(?:[,\s]+(\d{1,2})[:.](\d{1,2})(?:[:.](\d{1,2}))?)?/);
     if (textMatch) {
       const day = parseInt(textMatch[1], 10);
       const mKey = textMatch[2].toLowerCase().substring(0, 3);
       const month = monthNames[mKey] ?? 0;
       const year = parseInt(textMatch[3], 10);
-      return new Date(year, month, day).getTime();
+      const hour = textMatch[4] ? parseInt(textMatch[4], 10) : 0;
+      const minute = textMatch[5] ? parseInt(textMatch[5], 10) : 0;
+      const second = textMatch[6] ? parseInt(textMatch[6], 10) : 0;
+      return new Date(year, month, day, hour, minute, second).getTime();
     }
 
     return !isNaN(direct) ? direct : 0;
@@ -4048,8 +4057,42 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     .filter((tx: any) => tx.status === 'approved' || tx.status === 'completed' || tx.status === 'flagged')
     .map((tx: any) => {
       const partner = partners.find((p: any) => p.ownerUid === tx.partnerUid || p.id === tx.partnerId);
-      const txUser = users.find(u => u.uid === tx.userUid || u.qrToken === tx.userToken);
+      // Validasi pencarian user yang ketat agar tidak salah mencocokkan undefined
+      const txUser = users.find(u => 
+        (tx.userUid && u.uid === tx.userUid) || 
+        (tx.userEmail && u.email && u.email.toLowerCase() === tx.userEmail.toLowerCase()) || 
+        (tx.userToken && u.qrToken && u.qrToken === tx.userToken)
+      );
+
+      const resolvedEmail = tx.userEmail || txUser?.email || tx.userToken || '-';
+      const resolvedName = tx.userName || txUser?.displayName || (resolvedEmail !== '-' ? resolvedEmail.split('@')[0] : 'User');
       const dateVal = tx.createdAt || tx.date || '';
+
+      const isLeaderboardReward = tx.type === 'leaderboard_reward' || 
+        tx.partnerName?.toLowerCase().includes('hadiah juara') ||
+        tx.categoryLabel?.toLowerCase().includes('papan peringkat') ||
+        tx.categoryLabel?.toLowerCase().includes('leaderboard') ||
+        tx.title?.toLowerCase().includes('hadiah juara') ||
+        tx.photoUrl === 'leaderboard_reward_badge';
+
+      if (isLeaderboardReward) {
+        return {
+          id: `tx_${tx.id}`,
+          type: 'Hadiah Juara' as any,
+          title: tx.partnerName || tx.title || 'Hadiah Juara Leaderboard',
+          category: 'Papan Peringkat',
+          status: 'Success' as const,
+          points: tx.points || tx.totalPoints || 0,
+          date: dateVal,
+          timestamp: parseActivityTimestamp(dateVal),
+          userEmail: resolvedEmail,
+          displayName: resolvedName,
+          extra: tx.categoryLabel || `Hadiah ${tx.category || 'Papan Peringkat'}`,
+          image: '',
+          isLeaderboardBadge: true
+        };
+      }
+
       return {
         id: `tx_${tx.id}`,
         type: 'Setoran Mitra' as any,
@@ -4059,10 +4102,11 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
         points: tx.points || tx.totalPoints || 0,
         date: dateVal,
         timestamp: parseActivityTimestamp(dateVal),
-        userEmail: txUser?.email || tx.userToken || '-',
-        displayName: txUser?.displayName || tx.userName || 'User',
+        userEmail: resolvedEmail,
+        displayName: resolvedName,
         extra: partner?.name || tx.partnerName || 'Bank Sampah',
-        image: tx.photoUrl || tx.image || tx.proofImage || ''
+        image: (tx.photoUrl && tx.photoUrl !== 'leaderboard_reward_badge') ? tx.photoUrl : (tx.image || tx.proofImage || ''),
+        isLeaderboardBadge: false
       };
     });
 
@@ -4129,6 +4173,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       else if (activityFilter === 'deposit') typeMatch = item.type === 'Setoran TPA' || item.type === 'Setoran Mitra';
       else if (activityFilter === 'claim') typeMatch = item.type === 'Klaim Hadiah';
       else if (activityFilter === 'mission') typeMatch = item.type === 'Misi Lingkungan' || item.type === 'Quiz Komunitas';
+      else if (activityFilter === 'leaderboard_reward') typeMatch = item.type === 'Hadiah Juara' || Boolean((item as any).isLeaderboardBadge);
 
       let searchMatch = true;
       if (activitySearchQuery.trim()) {
@@ -5058,6 +5103,12 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                           {allActivities.filter(a => (a.type as any) === 'Misi Lingkungan' || (a.type as any) === 'Quiz Komunitas').length}
                         </p>
                       </div>
+                      <div className="bg-amber-50 px-3.5 py-2 rounded-2xl border border-amber-200 text-center">
+                        <p className="text-[10px] font-bold text-amber-600 uppercase">Reward Juara</p>
+                        <p className="text-base font-display font-black text-amber-800">
+                          {allActivities.filter(a => a.type === 'Hadiah Juara' || Boolean((a as any).isLeaderboardBadge)).length}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -5090,7 +5141,8 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         { id: 'scan', label: 'Scan AI' },
                         { id: 'deposit', label: 'Setoran' },
                         { id: 'claim', label: 'Klaim Hadiah' },
-                        { id: 'mission', label: 'Misi & Quiz' }
+                        { id: 'mission', label: 'Misi & Quiz' },
+                        { id: 'leaderboard_reward', label: '🏆 Reward Leaderboard' }
                       ].map((f) => (
                         <button
                           key={f.id}
@@ -5123,7 +5175,9 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                           <tr>
                             <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Pengguna</th>
                             <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Aktivitas</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Bukti Foto / Visual</th>
+                            {activityFilter !== 'leaderboard_reward' && (
+                              <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Bukti Foto / Visual</th>
+                            )}
                             <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Tanggal & Waktu</th>
                             <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Mutasi Poin</th>
                             <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Status</th>
@@ -5159,15 +5213,19 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                       item.type === 'Scan AI' ? 'bg-blue-50 text-blue-600' :
                                       item.type === 'Setoran TPA' || (item.type as any) === 'Setoran Mitra' ? 'bg-emerald-50 text-emerald-600' :
                                       (item.type as any) === 'Misi Lingkungan' || (item.type as any) === 'Quiz Komunitas' ? 'bg-purple-50 text-purple-600' :
+                                      (item.type as any) === 'Hadiah Juara' ? 'bg-amber-50 text-amber-600 border border-amber-200 shadow-xs' :
                                       'bg-amber-50 text-amber-600'
                                     }`}>
                                       {item.type === 'Scan AI' ? <Camera size={16} /> :
                                        item.type === 'Setoran TPA' || (item.type as any) === 'Setoran Mitra' ? <Recycle size={16} /> :
                                        (item.type as any) === 'Misi Lingkungan' || (item.type as any) === 'Quiz Komunitas' ? <Sparkles size={16} /> :
+                                       (item.type as any) === 'Hadiah Juara' ? <Award size={17} className="text-amber-500 animate-pulse" /> :
                                        <Award size={16} />}
                                     </div>
                                     <div className="min-w-0">
-                                      <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest block">{item.type}</span>
+                                      <span className={`text-[9px] font-black uppercase tracking-widest block ${
+                                        (item.type as any) === 'Hadiah Juara' ? 'text-amber-600' : 'text-stone-400'
+                                      }`}>{item.type}</span>
                                       <p className="font-bold text-stone-900 text-xs sm:text-sm truncate max-w-[200px]">{item.title}</p>
                                       {item.extra && (
                                         <p className="text-[10px] text-stone-500 font-medium truncate max-w-[200px]">{item.extra}</p>
@@ -5176,44 +5234,60 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                   </div>
                                 </td>
 
-                                {/* Bukti Foto / Visual */}
-                                <td className="px-6 py-4">
-                                  {item.image ? (
-                                    <button
-                                      onClick={() => setSelectedPhotoPreview({
-                                        image: item.image || '',
-                                        user: item.displayName || item.userEmail || 'User',
-                                        title: item.title || item.type,
-                                        date: item.date
-                                      })}
-                                      className="inline-block group/thumb cursor-pointer"
-                                      title="Klik untuk memperbesar foto bukti"
-                                    >
-                                      <img
-                                        src={normalizePhotoUrl(item.image)}
-                                        alt="Bukti Foto"
-                                        className="w-11 h-11 object-cover rounded-xl border-2 border-stone-200 group-hover/thumb:border-emerald-500 group-hover/thumb:scale-110 shadow-xs transition-all duration-200"
-                                      />
-                                    </button>
-                                  ) : (
-                                    <div className="flex items-center gap-1.5" title="Data arsip scan AI (foto kompresi lama tidak disimpan)">
-                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
-                                        isOrganik ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
-                                        isPlastik ? 'bg-blue-50 border-blue-200 text-blue-600' :
-                                        isKertas ? 'bg-amber-50 border-amber-200 text-amber-600' :
-                                        isLogam ? 'bg-slate-100 border-slate-200 text-slate-600' :
-                                        'bg-stone-100 border-stone-200 text-stone-500'
-                                      }`}>
-                                        {isOrganik ? <Leaf size={15} /> :
-                                         isPlastik ? <Recycle size={15} /> :
-                                         isKertas ? <FileText size={15} /> :
-                                         isLogam ? <Package size={15} /> :
-                                         <Camera size={15} />}
+                                {/* Bukti Foto / Visual — hanya tampil jika bukan tab reward leaderboard */}
+                                {activityFilter !== 'leaderboard_reward' && (
+                                  <td className="px-6 py-4">
+                                    {(item as any).isLeaderboardBadge || (item.type as any) === 'Hadiah Juara' ? (
+                                      <div className="flex items-center gap-1.5" title="Medali Penghargaan Juara Papan Peringkat">
+                                        <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0 shadow-xs">
+                                          <Award size={18} className="text-amber-500" />
+                                        </div>
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-200">
+                                          Medali Juara
+                                        </span>
                                       </div>
-                                      <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md">Arsip AI</span>
-                                    </div>
-                                  )}
-                                </td>
+                                    ) : item.image && item.image !== 'leaderboard_reward_badge' ? (
+                                      <button
+                                        onClick={() => setSelectedPhotoPreview({
+                                          image: item.image || '',
+                                          user: item.displayName || item.userEmail || 'User',
+                                          title: item.title || item.type,
+                                          date: item.date
+                                        })}
+                                        className="inline-block group/thumb cursor-pointer"
+                                        title="Klik untuk memperbesar foto bukti"
+                                      >
+                                        <img
+                                          src={normalizePhotoUrl(item.image)}
+                                          alt="Bukti Foto"
+                                          onError={(e) => {
+                                            (e.target as HTMLElement).style.display = 'none';
+                                          }}
+                                          className="w-11 h-11 object-cover rounded-xl border-2 border-stone-200 group-hover/thumb:border-emerald-500 group-hover/thumb:scale-110 shadow-xs transition-all duration-200"
+                                        />
+                                      </button>
+                                    ) : (
+                                      <div className="flex items-center gap-1.5" title={item.type === 'Scan AI' ? 'Data arsip scan AI (foto kompresi lama tidak disimpan)' : 'Data tersimpan tanpa lampiran foto'}>
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                                          isOrganik ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
+                                          isPlastik ? 'bg-blue-50 border-blue-200 text-blue-600' :
+                                          isKertas ? 'bg-amber-50 border-amber-200 text-amber-600' :
+                                          isLogam ? 'bg-slate-100 border-slate-200 text-slate-600' :
+                                          'bg-stone-100 border-stone-200 text-stone-500'
+                                        }`}>
+                                          {isOrganik ? <Leaf size={15} /> :
+                                           isPlastik ? <Recycle size={15} /> :
+                                           isKertas ? <FileText size={15} /> :
+                                           isLogam ? <Package size={15} /> :
+                                           <Camera size={15} />}
+                                        </div>
+                                        <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md">
+                                          {item.type === 'Scan AI' ? 'Arsip AI' : 'Arsip'}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </td>
+                                )}
 
                                 {/* Tanggal & Waktu */}
                                 <td className="px-6 py-4">
@@ -5240,7 +5314,9 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                     item.status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
                                     'bg-blue-100 text-blue-800'
                                   }`}>
-                                    {item.status === 'Success' || item.status === 'Approved' ? 'Diterima' :
+                                    {item.status === 'Success' || item.status === 'Approved' ? (
+                                      (item.type as any) === 'Hadiah Juara' ? 'Diklaim' : 'Diterima'
+                                    ) :
                                      item.status === 'Pending' ? 'Menunggu' :
                                      item.status === 'Rejected' ? 'Ditolak' : item.status}
                                   </span>
@@ -6207,8 +6283,18 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <X size={18} />
                 </button>
               </div>
-              <div className="rounded-[28px] overflow-hidden border border-stone-100 bg-stone-50">
-                <img src={normalizePhotoUrl(selectedPhotoPreview.image)} alt="Preview Bukti" className="w-full max-h-[65vh] object-contain" />
+              <div className="rounded-[28px] overflow-hidden border border-stone-100 bg-stone-50 flex items-center justify-center min-h-[160px]">
+                <img
+                  src={normalizePhotoUrl(selectedPhotoPreview.image)}
+                  alt="Preview Bukti"
+                  className="w-full max-h-[65vh] object-contain"
+                  onError={(e) => {
+                    const parent = (e.target as HTMLElement).parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="py-16 text-center text-stone-400 text-xs font-bold px-6"><p>⚠️ Gambar bukti tidak dapat dimuat atau telah kedaluwarsa dari penyimpanan server.</p></div>';
+                    }
+                  }}
+                />
               </div>
             </motion.div>
           </div>

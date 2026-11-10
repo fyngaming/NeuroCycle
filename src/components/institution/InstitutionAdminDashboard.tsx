@@ -295,11 +295,17 @@ export const InstitutionAdminDashboard: React.FC<InstitutionAdminDashboardProps>
     transactions
       .filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '')
       .forEach((tx: any) => {
-      const user = users.find((u: any) => u.uid === tx.userUid || u.qrToken === tx.userToken);
+      const user = users.find((u: any) => 
+        (tx.userUid && u.uid === tx.userUid) || 
+        (tx.userEmail && u.email && u.email.toLowerCase() === tx.userEmail.toLowerCase()) || 
+        (tx.userToken && u.qrToken && u.qrToken === tx.userToken)
+      );
+      const resolvedEmail = tx.userEmail || user?.email || tx.userToken || '-';
+      const resolvedName = tx.userName || user?.displayName || (resolvedEmail !== '-' ? resolvedEmail.split('@')[0] : 'User');
       rows.push({
         id: tx.id,
-        displayName: user?.displayName || tx.userToken || tx.userEmail || '-',
-        email: user?.email || tx.userEmail || '-',
+        displayName: resolvedName,
+        email: resolvedEmail,
         partner: tx.partnerName || '-',
         category: tx.category || '-',
         weight: tx.totalWeight || tx.weight || 0,
