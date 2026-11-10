@@ -4139,29 +4139,37 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       extra: item.location || 'Lokasi belum diisi',
       image: item.image || item.photoUrl || ''
     })),
-    ...allClaims.map(item => ({
-      id: item.id || `claim_${Math.random()}`,
-      type: 'Klaim Hadiah' as const,
-      title: item.title || 'Klaim Hadiah',
-      category: 'Tukar Poin',
-      status: item.status,
-      points: item.points || 0,
-      date: item.date,
-      timestamp: parseActivityTimestamp(item.date),
-      userEmail: item.userEmail,
-      displayName: item.displayName,
-      extra: item.title,
-      image: item.image || item.photoUrl || ''
-    })),
+    ...allClaims.map(item => {
+      const isLb = item.id?.startsWith('lb_claim_') || item.title?.toLowerCase().includes('hadiah juara');
+      return {
+        id: item.id || `claim_${Math.random()}`,
+        type: (isLb ? 'Hadiah Juara' : 'Klaim Hadiah') as any,
+        title: item.title || (isLb ? 'Hadiah Juara Leaderboard' : 'Klaim Hadiah'),
+        category: isLb ? 'Papan Peringkat' : 'Tukar Poin',
+        status: isLb ? 'Success' : item.status,
+        points: item.points || 0,
+        date: item.date,
+        timestamp: parseActivityTimestamp(item.date),
+        userEmail: item.userEmail,
+        displayName: item.displayName,
+        extra: item.title,
+        image: isLb ? '' : (item.image || item.photoUrl || ''),
+        isLeaderboardBadge: isLb
+      };
+    }),
     ...allMissions,
     ...allPartnerTxs
   ];
 
-  const seenActivityIds = new Set<string>();
+  const seenActivityKeys = new Set<string>();
   const allActivities = allActivitiesRaw
     .filter(item => {
-      if (!item.id || seenActivityIds.has(item.id)) return false;
-      seenActivityIds.add(item.id);
+      const isLb = item.type === 'Hadiah Juara' || Boolean((item as any).isLeaderboardBadge);
+      const dedupeKey = isLb
+        ? `lb_${item.userEmail}_${item.title}_${formatActivityDate(item.date).date}`
+        : (item.id || `act_${Math.random()}`);
+      if (!dedupeKey || seenActivityKeys.has(dedupeKey)) return false;
+      seenActivityKeys.add(dedupeKey);
       return true;
     })
     .sort((a, b) => b.timestamp - a.timestamp);
@@ -4171,7 +4179,6 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       let typeMatch = true;
       if (activityFilter === 'scan') typeMatch = item.type === 'Scan AI';
       else if (activityFilter === 'deposit') typeMatch = item.type === 'Setoran TPA' || item.type === 'Setoran Mitra';
-      else if (activityFilter === 'claim') typeMatch = item.type === 'Klaim Hadiah';
       else if (activityFilter === 'mission') typeMatch = item.type === 'Misi Lingkungan' || item.type === 'Quiz Komunitas';
       else if (activityFilter === 'leaderboard_reward') typeMatch = item.type === 'Hadiah Juara' || Boolean((item as any).isLeaderboardBadge);
 
@@ -5140,9 +5147,8 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         { id: 'all', label: 'Semua' },
                         { id: 'scan', label: 'Scan AI' },
                         { id: 'deposit', label: 'Setoran' },
-                        { id: 'claim', label: 'Klaim Hadiah' },
                         { id: 'mission', label: 'Misi & Quiz' },
-                        { id: 'leaderboard_reward', label: '🏆 Reward Leaderboard' }
+                        { id: 'leaderboard_reward', label: 'Reward Leaderboard' }
                       ].map((f) => (
                         <button
                           key={f.id}
