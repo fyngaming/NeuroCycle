@@ -110,7 +110,7 @@ const UserDepositSubmit = ({ onClose, currentUserQr, userUid, userData }: { onCl
         };
         await setDoc(newDocRef, txData);
 
-        // Prepend pending deposit log to user's depositHistory
+        // Prepend pending deposit log to user's depositHistory & add pending notification
         if (targetUserUid && targetUserData) {
           const newDeposit = {
             id: txId,
@@ -126,7 +126,19 @@ const UserDepositSubmit = ({ onClose, currentUserQr, userUid, userData }: { onCl
           };
           const userRef = doc(db, 'users', targetUserUid);
           const updatedHistory = [newDeposit, ...(targetUserData.depositHistory || [])];
-          await setDoc(userRef, { depositHistory: updatedHistory }, { merge: true });
+          
+          const newPendingNotif = {
+            id: 'notif_' + Math.random().toString(36).substr(2, 9),
+            title: 'Pengajuan Setoran Terkirim ⏳',
+            message: `Setoran sampah Anda (${categoryData?.name || category}, ${weight}kg) berhasil dikirim ke ${partnerDoc?.name || 'Bank Sampah Partner'}. Menunggu verifikasi petugas.`,
+            date: new Date().toLocaleString('id-ID'),
+            type: 'warning',
+            isRead: false,
+            depositId: txId
+          };
+          const updatedNotifications = [newPendingNotif, ...(targetUserData.notifications || [])];
+
+          await setDoc(userRef, { depositHistory: updatedHistory, notifications: updatedNotifications }, { merge: true });
         }
 
         setSuccessInfo({
@@ -158,7 +170,7 @@ const UserDepositSubmit = ({ onClose, currentUserQr, userUid, userData }: { onCl
           createdAt: new Date().toISOString()
         });
 
-        // Prepend pending deposit log to user's depositHistory
+        // Prepend pending deposit log to user's depositHistory & add pending notification
         if (targetUserUid && targetUserData) {
           const newDeposit = {
             id: txId,
@@ -174,7 +186,19 @@ const UserDepositSubmit = ({ onClose, currentUserQr, userUid, userData }: { onCl
           };
           const userRef = doc(db, 'users', targetUserUid);
           const updatedHistory = [newDeposit, ...(targetUserData.depositHistory || [])];
-          await setDoc(userRef, { depositHistory: updatedHistory }, { merge: true });
+          
+          const newPendingNotif = {
+            id: 'notif_' + Math.random().toString(36).substr(2, 9),
+            title: 'Setoran Menunggu Review Admin ⏳',
+            message: `Pengajuan setoran manual Anda (${categoryData?.name || category}, ${weight}kg) di "${manualName || 'Bank Sampah'}" sedang ditinjau oleh Admin.`,
+            date: new Date().toLocaleString('id-ID'),
+            type: 'warning',
+            isRead: false,
+            depositId: txId
+          };
+          const updatedNotifications = [newPendingNotif, ...(targetUserData.notifications || [])];
+
+          await setDoc(userRef, { depositHistory: updatedHistory, notifications: updatedNotifications }, { merge: true });
         }
 
         setSuccessInfo({

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Lock, Copy } from 'lucide-react';
+import LeaderboardRewardSettings from '../admin/LeaderboardRewardSettings';
 import { db } from '../../lib/firebase';
 import { normalizePhotoUrl } from '../../lib/photoUrl';
 import {
@@ -17,7 +18,7 @@ interface SuperAdminDashboardProps {
 }
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'institutions' | 'partners' | 'users' | 'user_assignments' | 'transactions' | 'error_logs' | 'inst_passwords'>('institutions');
+  const [activeTab, setActiveTab] = useState<'institutions' | 'partners' | 'users' | 'user_assignments' | 'transactions' | 'error_logs' | 'inst_passwords' | 'leaderboard_rewards'>('institutions');
   const [institutions, setInstitutions] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -330,6 +331,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
             { id: 'transactions', label: 'Transactions' },
             { id: 'error_logs', label: 'Error Logs' },
             { id: 'inst_passwords', label: 'Password Institusi' },
+            { id: 'leaderboard_rewards', label: '🏆 Hadiah Leaderboard' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}>
@@ -1136,6 +1138,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === 'leaderboard_rewards' && (
+          <LeaderboardRewardSettings />
         )}
 
         {/* Modal Scan / Detail Bukti Setoran Sampah */}

@@ -55,6 +55,10 @@ import {
   Search,
   Copy,
   Lock,
+  Trophy,
+  Package,
+  FileText,
+  Layers,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -104,6 +108,18 @@ import RewardManagement from './components/RewardManagement';
 import QuizScreen from './components/QuizScreen';
 import SuperAdminDashboard from './components/superAdmin/SuperAdminDashboard';
 import InstitutionAdminDashboard from './components/institution/InstitutionAdminDashboard';
+import LeaderboardView from './components/leaderboard/LeaderboardView';
+import AchievementModal from './components/leaderboard/AchievementModal';
+import { BadgeMedal } from './components/leaderboard/BadgeMedal';
+import LeaderboardRewardSettings from './components/admin/LeaderboardRewardSettings';
+import UserProfileHeader from './components/profile/UserProfileHeader';
+import ActiveAchievementsCard from './components/profile/ActiveAchievementsCard';
+import { isBadgeActive } from './components/profile/badgeExpiryUtils';
+import ViewModeSwitcher, { ViewMode } from './components/navigation/ViewModeSwitcher';
+import DesktopSidebar from './components/navigation/DesktopSidebar';
+import HomeInfoBanner from './components/home/HomeInfoBanner';
+import AppFooter from './components/navigation/AppFooter';
+import type { UserBadge } from './types';
 
 // --- Type Definitions ---
 type AppState =
@@ -112,7 +128,7 @@ type AppState =
   | 'map' | 'about' | 'scan_options' | 'admin_dashboard' | 'super_admin_dashboard' | 'institution_admin_dashboard' | 'partner_dashboard'
   | 'waste_bank_list' | 'waste_bank_calculate' | 'waste_bank_verify'
   | 'daily_missions' | 'welcome'
-  | 'quiz';
+  | 'quiz' | 'leaderboard';
 
 interface NotificationItem {
   id: string;
@@ -135,6 +151,7 @@ interface ScanHistoryItem {
   date: string;
   impact: { co2: number; water: number; energy: number };
   image?: string;
+  photoUrl?: string;
 }
 
 interface DepositHistoryItem {
@@ -166,6 +183,11 @@ interface UserData {
   uid?: string;
   email: string;
   displayName: string;
+  username?: string;
+  avatarUrl?: string;
+  photoURL?: string;
+  avatarFrame?: string;
+  bio?: string;
   role?: string;
   institutionId?: string;
   institutionCode?: string;
@@ -177,6 +199,8 @@ interface UserData {
   lastLogin: string;
   mascotName: string;
   isBanned?: boolean;
+  badges?: UserBadge[];
+  claimedLeaderboardRewards?: string[];
   history: { date: string; co2: number; water: number; energy: number }[];
   scanHistory: ScanHistoryItem[];
   claimHistory: ClaimHistoryItem[];
@@ -190,7 +214,7 @@ const AboutScreen = ({ onBack }: { onBack: () => void }) => (
     initial={{ opacity: 0, x: 20 }}
     animate={{ opacity: 1, x: 0 }}
     exit={{ opacity: 0, x: -20 }}
-    className="p-6 pb-40"
+    className="p-6 pb-40 max-w-4xl mx-auto"
   >
     <header className="flex items-center justify-between mb-8">
       <h2 className="text-2xl font-display font-black text-stone-900">Tentang</h2>
@@ -283,7 +307,7 @@ const RedemptionCenter = ({ points, onBack, onClaim }: { points: number, onBack:
       exit={{ opacity: 0, x: -100 }}
       className="fixed inset-0 bg-stone-50 z-150 overflow-y-auto"
     >
-      <div className="p-6 max-w-md mx-auto min-h-screen pb-32">
+      <div className="p-6 max-w-5xl mx-auto min-h-screen pb-32">
         <header className="flex items-center justify-between mb-8">
           <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm border border-stone-100 active:scale-95 transition-transform">
             <ArrowLeft size={20} className="text-stone-600" />
@@ -311,7 +335,7 @@ const RedemptionCenter = ({ points, onBack, onClaim }: { points: number, onBack:
             <p className="text-stone-500 text-sm">Silakan hubungi admin atau kembali lagi nanti untuk melihat penukaran poin terbaru.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {offers.map((offer, idx) => (
               <motion.div
                 key={idx}
@@ -446,12 +470,14 @@ const IconMap: Record<string, React.ElementType> = {
   AlertTriangle: AlertTriangle,
 };
 
-const EducationList = ({ onBack, onSelectArticle }: {
+const EducationList = ({ onBack, onSelectArticle, isDesktop = false }: {
   onBack: () => void,
-  onSelectArticle: (article: any) => void
+  onSelectArticle: (article: any) => void,
+  isDesktop?: boolean
 }) => {
   const [articles, setArticles] = useState<any[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     import('./services/missionService').then(({ getPublishedArticles }) => {
@@ -463,67 +489,259 @@ const EducationList = ({ onBack, onSelectArticle }: {
     });
   }, []);
 
-  const displayArticles = loadingArticles ? [] : articles;
+  const displayArticles = useMemo(() => {
+    if (loadingArticles) return [];
+    if (!searchQuery.trim()) return articles;
+    const q = searchQuery.toLowerCase();
+    return articles.filter(a =>
+      a.title?.toLowerCase().includes(q) ||
+      a.excerpt?.toLowerCase().includes(q) ||
+      a.author?.toLowerCase().includes(q)
+    );
+  }, [loadingArticles, articles, searchQuery]);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className="p-6 pb-40"
+      className={`pb-40 ${isDesktop ? 'p-6 sm:p-8 max-w-5xl mx-auto' : 'p-4 pb-36 max-w-md mx-auto'}`}
     >
-      <header className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-display font-black text-stone-900">Pusat Edukasi</h2>
-        <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm border border-stone-100 active:scale-95 transition-transform">
-          <ArrowLeft size={20} className="text-stone-600" />
+      <header className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-display font-black text-stone-900 flex items-center gap-2">
+            <span>Pusat Edukasi</span>
+            <BookOpen size={20} className="text-emerald-600" />
+          </h2>
+          <p className="text-[11px] sm:text-xs text-stone-500 font-medium mt-0.5">
+            Panduan cerdas pilah sampah & wawasan ramah lingkungan
+          </p>
+        </div>
+        <button
+          onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-white hover:bg-stone-100 text-stone-700 flex items-center justify-center shadow-xs border border-stone-200 transition-all cursor-pointer active:scale-95 shrink-0"
+          title="Kembali"
+        >
+          <ArrowLeft size={18} />
         </button>
       </header>
 
+      {/* Search Bar */}
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Cari artikel atau topik daur ulang..."
+          className="w-full pl-10 pr-9 py-2.5 bg-white border border-stone-200/90 rounded-2xl text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-xs"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-0.5"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
       {loadingArticles ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-emerald-500" size={40} />
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 className="animate-spin text-emerald-500" size={36} />
+          <p className="text-xs text-stone-400 font-medium">Memuat artikel edukasi...</p>
+        </div>
+      ) : displayArticles.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-stone-200 p-6">
+          <div className="w-12 h-12 rounded-2xl bg-stone-100 text-stone-400 flex items-center justify-center mx-auto mb-3">
+            <BookOpen size={24} />
+          </div>
+          <h4 className="font-bold text-sm text-stone-800">Tidak ada artikel ditemukan</h4>
+          <p className="text-xs text-stone-400 mt-1">Coba kata kunci pencarian yang lain.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {displayArticles.map((article) => (
-            <motion.div
-              key={article.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onSelectArticle(article)}
-              className="bg-white p-5 rounded-4xl shadow-sm border border-stone-100 flex items-center gap-5 cursor-pointer group"
-            >
-              <div className="w-14 h-14 bg-stone-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-emerald-50 transition-colors">
-                {IconMap[article.icon] && React.createElement(IconMap[article.icon], { className: `text-${article.color}-500` })}
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-stone-800 text-sm mb-1">{article.title}</h4>
-                <p className="text-[10px] text-stone-400 line-clamp-2 leading-relaxed">{article.excerpt}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full">{article.readTime}</span>
-                  <span className="text-[8px] font-bold text-stone-300 uppercase tracking-widest">{article.author}</span>
+        <div className={isDesktop ? "grid grid-cols-1 md:grid-cols-2 gap-5" : "flex flex-col gap-3.5"}>
+          {displayArticles.map((article) => {
+            const iconComp = IconMap[article.icon] || BookOpen;
+            const isPdf = article.contentType === 'pdf';
+
+            return (
+              <motion.div
+                key={article.id}
+                whileHover={isDesktop ? { y: -3, scale: 1.01 } : {}}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onSelectArticle(article)}
+                className={`bg-white rounded-3xl border border-stone-200/80 hover:border-emerald-400 shadow-xs hover:shadow-lg transition-all cursor-pointer group flex flex-col justify-between ${
+                  isDesktop ? 'p-5 min-h-[170px]' : 'p-4 gap-2.5'
+                }`}
+              >
+                {/* Top Section: Header & Content */}
+                <div className="flex flex-col gap-3">
+                  {/* Header row: Icon, Category Badges & Chevron */}
+                  <div className="flex items-center justify-between gap-3 w-full">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 group-hover:scale-105 group-hover:bg-emerald-100/60 transition-all">
+                        {React.createElement(iconComp, { size: 20, className: `text-${article.color || 'emerald'}-600` })}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                        {isPdf && (
+                          <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                            PDF
+                          </span>
+                        )}
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          {article.category || 'Lingkungan'}
+                        </span>
+                        <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <Clock size={11} className="text-stone-400" />
+                          <span>{article.readTime}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="text-stone-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </div>
+
+                  {/* Title & Excerpt */}
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-stone-900 text-sm sm:text-base leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
+                      {article.title}
+                    </h4>
+                    <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed mt-1">
+                      {article.excerpt}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight size={18} className="text-stone-300" />
-            </motion.div>
-          ))}
-              </div>
-            )}
-          </motion.div>
+
+                {/* Footer: Author & Baca Selengkapnya */}
+                <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1 pr-2">
+                    <User size={12} className="text-stone-400 shrink-0" />
+                    <span className="font-medium text-stone-600 truncate max-w-[220px]">
+                      {article.author || 'Tim Edukasi'}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-600 group-hover:text-emerald-700 group-hover:underline shrink-0">
+                    Baca Selengkapnya →
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
   );
 };
 
-const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onClearAllHistory, saveUserData, onShowQR, onShowPartner, onShowPartnerTx, onShowUserDeposit }: {
-  userData: UserData,
-  onPointsClick: () => void,
-  onBack: () => void,
-  onDeleteHistory: (id: string) => void,
-  onClearAllHistory?: () => void,
-  saveUserData: (data: UserData) => void,
-  onShowQR: () => void,
-  onShowPartner: () => void,
-  onShowPartnerTx: () => void,
-  onShowUserDeposit?: () => void,
+// Helper untuk menghilangkan pesan notifikasi duplikat/spam
+const deduplicateNotifications = (notifs: NotificationItem[]): NotificationItem[] => {
+  if (!notifs || !Array.isArray(notifs)) return [];
+  const seen = new Set<string>();
+  return notifs.filter(n => {
+    // Notifikasi status akun partner cukup 1 pesan saja, tidak boleh berulang
+    const key = n.title === 'Akun Terdaftar sebagai Partner'
+      ? 'partner_notice'
+      : `${n.title.trim()}_${n.message.trim()}_${n.depositId || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+// Helper untuk mendapatkan visual kategori sampah jika scan lama tidak menyimpan foto
+const getScanVisual = (category?: string, name?: string) => {
+  const text = `${category || ''} ${name || ''}`.toLowerCase();
+  if (text.includes('organik') || text.includes('banana') || text.includes('pisang') || text.includes('makanan') || text.includes('buah') || text.includes('sayur') || text.includes('daun') || text.includes('sisa')) {
+    return {
+      bgColor: 'bg-emerald-50 border border-emerald-200/90',
+      textColor: 'text-emerald-700',
+      badgeBg: 'bg-emerald-100/90 text-emerald-800 border-emerald-200',
+      label: 'Organik',
+      icon: <Leaf size={22} className="text-emerald-600" />
+    };
+  }
+  if (text.includes('plastik') || text.includes('bucket') || text.includes('pail') || text.includes('botol') || text.includes('gelas') || text.includes('ember') || text.includes('kresek') || text.includes('sedotan')) {
+    return {
+      bgColor: 'bg-blue-50 border border-blue-200/90',
+      textColor: 'text-blue-700',
+      badgeBg: 'bg-blue-100/90 text-blue-800 border-blue-200',
+      label: 'Plastik',
+      icon: <Recycle size={22} className="text-blue-600" />
+    };
+  }
+  if (text.includes('kertas') || text.includes('paper') || text.includes('karton') || text.includes('kardus') || text.includes('buku') || text.includes('dokumen')) {
+    return {
+      bgColor: 'bg-amber-50 border border-amber-200/90',
+      textColor: 'text-amber-700',
+      badgeBg: 'bg-amber-100/90 text-amber-800 border-amber-200',
+      label: 'Kertas',
+      icon: <FileText size={22} className="text-amber-600" />
+    };
+  }
+  if (text.includes('logam') || text.includes('metal') || text.includes('kaleng') || text.includes('besi') || text.includes('aluminium') || text.includes('kawat')) {
+    return {
+      bgColor: 'bg-slate-100 border border-slate-300/90',
+      textColor: 'text-slate-800',
+      badgeBg: 'bg-slate-200/90 text-slate-800 border-slate-300',
+      label: 'Logam',
+      icon: <Package size={22} className="text-slate-700" />
+    };
+  }
+  if (text.includes('kaca') || text.includes('glass') || text.includes('cermin') || text.includes('beling')) {
+    return {
+      bgColor: 'bg-cyan-50 border border-cyan-200/90',
+      textColor: 'text-cyan-700',
+      badgeBg: 'bg-cyan-100/90 text-cyan-800 border-cyan-200',
+      label: 'Kaca',
+      icon: <Sparkles size={22} className="text-cyan-600" />
+    };
+  }
+  if (text.includes('b3') || text.includes('baterai') || text.includes('elektronik') || text.includes('hazard') || text.includes('lampu') || text.includes('aki')) {
+    return {
+      bgColor: 'bg-rose-50 border border-rose-200/90',
+      textColor: 'text-rose-700',
+      badgeBg: 'bg-rose-100/90 text-rose-800 border-rose-200',
+      label: 'B3',
+      icon: <AlertTriangle size={22} className="text-rose-600" />
+    };
+  }
+  return {
+    bgColor: 'bg-emerald-50/70 border border-emerald-200/80',
+    textColor: 'text-emerald-700',
+    badgeBg: 'bg-stone-100 text-stone-700 border-stone-200',
+    label: category || 'Sampah',
+    icon: <Camera size={22} className="text-emerald-600" />
+  };
+};
+
+const UserDashboard = ({
+  userData,
+  onPointsClick,
+  onBack,
+  onDeleteHistory,
+  onClearAllHistory,
+  saveUserData,
+  onShowQR,
+  onShowPartner,
+  onShowPartnerTx,
+  onShowUserDeposit,
+  onOpenLeaderboard,
+  onOpenAchievements,
+  isDesktop = false
+}: {
+  userData: UserData;
+  onPointsClick: () => void;
+  onBack: () => void;
+  onDeleteHistory: (id: string) => void;
+  onClearAllHistory?: () => void;
+  saveUserData: (data: UserData) => void;
+  onShowQR: () => void;
+  onShowPartner: () => void;
+  onShowPartnerTx: () => void;
+  onShowUserDeposit?: () => void;
+  onOpenLeaderboard?: () => void;
+  onOpenAchievements?: () => void;
+  isDesktop?: boolean;
 }) => {
   const [activeTab, setActiveTab] = useState<'scan' | 'deposit' | 'claim' | 'transactions'>('scan');
   const [filterDay, setFilterDay] = useState('');
@@ -555,19 +773,28 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onCle
   }, [userData.uid, userData.email]);
 
   useEffect(() => {
-    if (isPartner && partnerDoc) {
+    if (!isPartner || !partnerDoc || !userData?.email) return;
+
+    const currentNotifs = userData.notifications || [];
+    const cleanedNotifs = deduplicateNotifications(currentNotifs);
+    const alreadyHasPartnerNotif = cleanedNotifs.some(n => n.title === 'Akun Terdaftar sebagai Partner');
+    const hasSpamDuplicates = cleanedNotifs.length !== currentNotifs.length;
+
+    if (!alreadyHasPartnerNotif) {
       const partnerNotification: NotificationItem = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: 'partner_notice_' + (userData.uid || Math.random().toString(36).substr(2, 9)),
         title: 'Akun Terdaftar sebagai Partner',
-        message: `Akun Google ini (${userData.email}) sudah terdaftar sebagai Partner: ${partnerDoc.name}. Silakan login melalui menu Partner untuk mengakses dashboard partner.`,
+        message: `Akun Google ini (${userData.email}) sudah terdaftar sebagai Partner: ${partnerDoc.name || 'Bank Sampah'}. Silakan login melalui menu Partner untuk mengakses dashboard partner.`,
         date: new Date().toLocaleString('id-ID'),
         type: 'warning',
         isRead: false
       };
-      const updatedNotifications = [partnerNotification, ...(userData.notifications || [])];
-      saveUserData({ ...userData, notifications: updatedNotifications });
+      saveUserData({ ...userData, notifications: [partnerNotification, ...cleanedNotifs] });
+    } else if (hasSpamDuplicates) {
+      // Otomatis bersihkan spam notifikasi berulang yang menumpuk
+      saveUserData({ ...userData, notifications: cleanedNotifs });
     }
-  }, [isPartner, partnerDoc, userData.email, userData, saveUserData]);
+  }, [isPartner, partnerDoc?.name, userData?.email]);
 
   const filteredScanHistory = useMemo(() => {
     const history = userData.scanHistory || [];
@@ -594,78 +821,215 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onCle
     });
   }, [userData.scanHistory, filterDay, filterMonth, filterYear]);
 
+  // Otomatis deduplikasi jika userData.badges memiliki duplikat pada kategori yang sama
+  useEffect(() => {
+    if (!userData.badges || userData.badges.length <= 1) return;
+    const catMap = new Map<string, UserBadge>();
+    let hasDupes = false;
+    userData.badges.forEach((b: UserBadge) => {
+      const existing = catMap.get(b.category);
+      if (existing) {
+        hasDupes = true;
+        if (b.rank < existing.rank || (b.rank === existing.rank && (b.awardedTimestamp || 0) >= (existing.awardedTimestamp || 0))) {
+          catMap.set(b.category, b);
+        }
+      } else {
+        catMap.set(b.category, b);
+      }
+    });
+
+    if (hasDupes) {
+      const cleanBadges = Array.from(catMap.values()).sort((a, b) => a.rank - b.rank);
+      saveUserData({ ...userData, badges: cleanBadges });
+    }
+  }, [userData.badges]);
+
+  const uniqueActiveBadgesCount = useMemo(() => {
+    const catMap = new Map<string, any>();
+    (userData.badges || []).filter(isBadgeActive).forEach(b => {
+      const existing = catMap.get(b.category);
+      if (!existing || b.rank < existing.rank || (b.rank === existing.rank && (b.awardedTimestamp || 0) >= (existing.awardedTimestamp || 0))) {
+        catMap.set(b.category, b);
+      }
+    });
+    return catMap.size;
+  }, [userData.badges]);
+
   useEffect(() => {
     if (!userData.uid) return;
     const q = query(collection(db, 'transactions'), where('userUid', '==', userData.uid));
     const unsub = onSnapshot(q, (snap) => {
       const txs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter((tx: any) => tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== '');
-      setUserTransactions(txs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        .filter((tx: any) => tx.type === 'leaderboard_reward' || (tx.photoUrl && typeof tx.photoUrl === 'string' && tx.photoUrl.trim() !== ''));
+
+      // Backfill / sinkronkan hadiah leaderboard dari userData.badges jika belum ada di koleksi transactions
+      const existingLbKeys = new Set(
+        txs
+          .filter((t: any) => t.type === 'leaderboard_reward')
+          .map((t: any) => `${t.category}_${t.rank || (t.partnerName?.includes('#1') ? 1 : t.partnerName?.includes('#2') ? 2 : 3)}`)
+      );
+
+      const categoryLabels: Record<string, string> = {
+        scanner: 'Scanner Sampah AI',
+        collector: 'Pengumpul Sampah',
+        quiz: 'Si Paling Kuis'
+      };
+
+      const syntheticLbTxs: any[] = [];
+      const userBadges = userData.badges || [];
+
+      userBadges.forEach((b: any) => {
+        const key = `${b.category}_${b.rank}`;
+        if (!existingLbKeys.has(key)) {
+          existingLbKeys.add(key);
+          const rewardTx = {
+            id: `lb_tx_${b.id || key}`,
+            userUid: userData.uid,
+            userEmail: userData.email || '',
+            type: 'leaderboard_reward',
+            partnerName: `Hadiah Juara #${b.rank} Leaderboard`,
+            category: b.category,
+            categoryLabel: categoryLabels[b.category] || 'Pemenang Papan Peringkat',
+            totalPoints: b.pointsReward || (b.rank === 1 ? 1000 : b.rank === 2 ? 500 : 250),
+            points: b.pointsReward || (b.rank === 1 ? 1000 : b.rank === 2 ? 500 : 250),
+            totalWeight: 0,
+            weight: 0,
+            status: 'approved',
+            photoUrl: 'leaderboard_reward_badge',
+            createdAt: b.awardedTimestamp ? new Date(b.awardedTimestamp).toISOString() : new Date().toISOString()
+          };
+          syntheticLbTxs.push(rewardTx);
+
+          // Simpan ke Firestore agar riwayat tersimpan permanen
+          if (userData.uid) {
+            addDoc(collection(db, 'transactions'), rewardTx).catch(() => {});
+          }
+        }
+      });
+
+      const allMerged = [...txs, ...syntheticLbTxs];
+      setUserTransactions(allMerged.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     });
     return () => unsub();
-  }, [userData.uid]);
+  }, [userData.uid, userData.badges, userData.claimedLeaderboardRewards]);
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
-      className="p-6 pb-40 min-h-screen bg-stone-50"
+      className={`min-h-screen bg-stone-50 ${isDesktop ? 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32' : 'p-4 sm:p-6 pb-48'}`}
     >
-      <header className="mb-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-display font-black text-stone-800">Dashboard Saya</h2>
-            <p className="text-sm text-stone-500 mt-1">Kelola setoran dan akses partner bank sampah.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={onShowQR}
-              className="flex items-center gap-2 py-2 px-4 bg-white rounded-3xl text-stone-700 font-semibold text-xs uppercase tracking-[0.18em] hover:bg-stone-100 active:scale-95 transition-all border border-stone-200">
-              <span className="text-base">🪪</span>
-              My QR
-            </button>
-            {isPartner ? (
-              <div className="flex items-center gap-2 px-4 py-2 bg-amber-900/30 rounded-3xl text-amber-400 font-semibold text-xs uppercase tracking-[0.18em] border border-amber-700">
-                <span className="text-base">⚠️</span>
-                Akun ini sudah terdaftar sebagai Partner
-              </div>
-            ) : userData.role === 'partner' ? (
-              <>
-                <button type="button" onClick={onShowPartnerTx}
-                  className="flex items-center gap-2 py-2 px-4 bg-teal-900/30 rounded-3xl text-teal-400 font-semibold text-xs uppercase tracking-[0.18em] hover:bg-teal-800/30 active:scale-95 transition-all border border-teal-700">
-                  <span className="text-base">➕</span>
-                  Kirim Setoran
-                </button>
-              </>
-            ) : (
-              null
-            )}
-          </div>
-        </div>
-      </header>
+      {/* 1. Header Profil Lebar & Mewah (Full-Width Top Header) */}
+      <UserProfileHeader
+        userData={userData}
+        onSaveUserData={saveUserData}
+        onShowQR={onShowQR}
+        onShowPartnerTx={onShowPartnerTx}
+        isPartner={isPartner}
+        partnerDoc={partnerDoc}
+        isDesktop={isDesktop}
+      />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-10">
-        <div className="bg-white p-5 rounded-4xl border border-stone-100 shadow-sm relative overflow-hidden group">
-          <div className="absolute -right-2 -bottom-2 w-12 h-12 bg-emerald-100 rounded-full blur-xl group-hover:scale-150 transition-transform" />
-          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 mb-3 relative z-10">
-            <Camera size={20} />
+      {/* 2. Quick Stat Cards (Responsive Grid: 4 Columns on Desktop, 2x2 Grid on Mobile) */}
+      <div className={isDesktop ? "grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" : "grid grid-cols-2 gap-3 mb-6"}>
+        {/* NeuroPoints Saldo */}
+        <div className={`bg-white ${isDesktop ? 'p-5' : 'p-3.5 sm:p-4'} rounded-3xl border border-stone-200/80 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all`}>
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-100/80 text-amber-600 flex items-center justify-center">
+              <Coins size={18} />
+            </div>
+            <button
+              onClick={onPointsClick}
+              className="text-[9px] sm:text-[10px] font-black text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded-xl transition-colors cursor-pointer"
+            >
+              Tukar →
+            </button>
           </div>
-          <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest relative z-10">Total Aktivitas</p>
-          <h4 className="text-2xl font-display font-bold text-stone-800 relative z-10">{userData.scans + (userData.depositHistory?.length || 0)}</h4>
+          <p className="text-[9px] sm:text-[10px] font-black text-stone-400 uppercase tracking-wider truncate">Saldo NeuroPoints</p>
+          <h4 className="text-xl sm:text-2xl font-display font-black text-stone-900 mt-0.5 truncate">
+            {(userData.points || 0).toLocaleString('id-ID')}
+            <span className="text-xs text-amber-600 ml-1 font-bold">NP</span>
+          </h4>
         </div>
-        <div className="bg-white p-5 rounded-4xl border border-stone-100 shadow-sm relative overflow-hidden group">
-          <div className="absolute -right-2 -bottom-2 w-12 h-12 bg-orange-100 rounded-full blur-xl group-hover:scale-150 transition-transform" />
-          <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 mb-3 relative z-10">
-            <Award size={20} />
+
+        {/* Total Aktivitas */}
+        <div className={`bg-white ${isDesktop ? 'p-5' : 'p-3.5 sm:p-4'} rounded-3xl border border-stone-200/80 shadow-xs relative overflow-hidden group hover:border-emerald-300 transition-all`}>
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center">
+              <Camera size={18} />
+            </div>
+            <span className="text-[9px] sm:text-[10px] font-bold text-stone-400">Total</span>
           </div>
-          <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest relative z-10">Level</p>
-          <h4 className="text-lg font-bold text-stone-800 truncate relative z-10">{userData.level}</h4>
+          <p className="text-[9px] sm:text-[10px] font-black text-stone-400 uppercase tracking-wider truncate">Total Aktivitas</p>
+          <h4 className="text-xl sm:text-2xl font-display font-black text-stone-900 mt-0.5">
+            {userData.scans + (userData.depositHistory?.length || 0)}
+          </h4>
+          <p className="text-[9px] sm:text-[10px] text-stone-400 font-medium mt-1 truncate">
+            {userData.scans} scan • {userData.depositHistory?.length || 0} setor
+          </p>
+        </div>
+
+        {/* Streak Aktivitas */}
+        <div className={`bg-white ${isDesktop ? 'p-5' : 'p-3.5 sm:p-4'} rounded-3xl border border-stone-200/80 shadow-xs relative overflow-hidden group hover:border-orange-300 transition-all`}>
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-orange-100/80 text-orange-600 flex items-center justify-center">
+              <Flame size={18} className="animate-pulse" />
+            </div>
+            <span className="text-[9px] sm:text-[10px] font-black text-orange-700 bg-orange-50 px-2 py-0.5 rounded-xl">Aktif</span>
+          </div>
+          <p className="text-[9px] sm:text-[10px] font-black text-stone-400 uppercase tracking-wider truncate">NeuroStreak</p>
+          <h4 className="text-xl sm:text-2xl font-display font-black text-stone-900 mt-0.5">
+            {userData.streak || 1}
+            <span className="text-xs text-orange-600 ml-1 font-bold">Hari</span>
+          </h4>
+          <p className="text-[9px] sm:text-[10px] text-stone-400 font-medium mt-1 truncate">
+            Konsistensi pilah
+          </p>
+        </div>
+
+        {/* Medali & Prestasi */}
+        <div className={`bg-white ${isDesktop ? 'p-5' : 'p-3.5 sm:p-4'} rounded-3xl border border-stone-200/80 shadow-xs relative overflow-hidden group hover:border-yellow-300 transition-all`}>
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-yellow-100/80 text-yellow-700 flex items-center justify-center">
+              <Trophy size={18} />
+            </div>
+            <button
+              onClick={onOpenAchievements}
+              className="text-[9px] sm:text-[10px] font-black text-yellow-800 bg-yellow-50 hover:bg-yellow-100 px-2 py-1 rounded-xl transition-colors cursor-pointer"
+            >
+              Rak →
+            </button>
+          </div>
+          <p className="text-[9px] sm:text-[10px] font-black text-stone-400 uppercase tracking-wider truncate">Medali Kehormatan</p>
+          <h4 className="text-xl sm:text-2xl font-display font-black text-stone-900 mt-0.5">
+            {uniqueActiveBadgesCount}
+            <span className="text-xs text-yellow-700 ml-1 font-bold">Aktif</span>
+          </h4>
+          <p className="text-[9px] sm:text-[10px] text-stone-400 font-medium mt-1 truncate">
+            Masa aktif 1 minggu
+          </p>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* 3. Medali Aktif Profil (Full-Width Showcase) */}
+      <ActiveAchievementsCard
+        badges={userData.badges || []}
+        onOpenAchievements={onOpenAchievements || (() => {})}
+        onOpenLeaderboard={onOpenLeaderboard || (() => {})}
+        isDesktop={isDesktop}
+      />
+
+      {/* 4. Riwayat & Transaksi (Full-Width Modern Card) */}
+      <div className="bg-white p-6 sm:p-8 rounded-4xl border border-stone-200/80 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <h3 className="text-xl font-display font-black text-stone-900">Riwayat & Transaksi</h3>
+            <p className="text-xs text-stone-500 font-medium mt-0.5">Catatan lengkap aktivitas pemilahan dan mutasi poin kamu</p>
+          </div>
+        </div>
+            {/* Tabs */}
       <div className="flex bg-stone-100 p-1.5 rounded-3xl mb-8 overflow-x-auto hide-scrollbar border border-stone-200">
         <button
           onClick={() => setActiveTab('scan')}
@@ -735,38 +1099,58 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onCle
                   <p className="text-stone-400 text-sm italic">Belum ada riwayat scan...</p>
                 </div>
               ) : (
-                filteredScanHistory.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    onClick={() => setPreviewScan(item)}
-                    className="bg-white p-4 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 group cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all"
-                  >
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-stone-50 text-stone-400">
-                          <Camera size={22} className="opacity-40" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-stone-800 text-sm truncate group-hover:text-emerald-700 transition-colors">{item.name}</h4>
-                      <p className="text-[9px] text-stone-500 font-medium">{item.date}</p>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteHistory(item.id);
-                      }}
-                      className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-all shrink-0 active:scale-95"
-                      title="Hapus riwayat ini"
+                filteredScanHistory.map((item) => {
+                  const itemImg = item.image || (item as any).photoUrl || (item as any).imageUrl || (item as any).thumbnail || (item as any).photo;
+                  const visual = getScanVisual(item.category, item.name);
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      onClick={() => setPreviewScan(item)}
+                      className="bg-white p-4 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 group cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all"
                     >
-                      <Trash2 size={15} />
-                    </button>
-                  </motion.div>
-                ))
+                      <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center">
+                        {itemImg ? (
+                          <img
+                            src={itemImg}
+                            alt={item.name}
+                            className="w-full h-full object-cover rounded-2xl border border-stone-200 group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              // Sembunyikan elemen img jika URL base64 atau link rusak, beralih ke visual fallback
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className={`w-full h-full rounded-2xl flex flex-col items-center justify-center ${visual.bgColor} shadow-inner`}>
+                            {visual.icon}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-stone-800 text-sm truncate group-hover:text-emerald-700 transition-colors">
+                            {item.name}
+                          </h4>
+                          <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${visual.badgeBg}`}>
+                            {item.category || visual.label}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-stone-400 font-medium mt-0.5">{item.date}</p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteHistory(item.id);
+                        }}
+                        className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-all shrink-0 active:scale-95"
+                        title="Hapus riwayat ini"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </motion.div>
+                  );
+                })
               )}
             </div>
           </motion.div>
@@ -803,9 +1187,20 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onCle
                           <h4 className="font-bold text-stone-800 text-sm">{deposit.date}</h4>
                         </div>
                         <div className="text-right">
-                          <p className={`text-sm font-display font-bold ${deposit.status === 'Approved' ? 'text-emerald-600' : deposit.status === 'Pending' ? 'text-amber-600' : 'text-red-600'}`}>
-                            +{deposit.totalPoints} NP
-                          </p>
+                          {deposit.status === 'Rejected' ? (
+                            <>
+                              <p className="text-xs text-stone-400 line-through">
+                                +{deposit.totalPoints} NP
+                              </p>
+                              <p className="text-sm font-display font-bold text-rose-500">
+                                +0 NP
+                              </p>
+                            </>
+                          ) : (
+                            <p className={`text-sm font-display font-bold ${deposit.status === 'Approved' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              +{deposit.totalPoints} NP
+                            </p>
+                          )}
                           <p className="text-[9px] text-stone-400 font-bold uppercase">{deposit.totalWeight.toFixed(1)} kg</p>
                         </div>
                       </div>
@@ -898,39 +1293,94 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onCle
                   <p className="text-stone-400 text-sm font-medium">Belum ada transaksi.</p>
                 </div>
               ) : (
-                userTransactions.map((tx: any) => (
-                  <div key={tx.id} className="bg-white p-5 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                      tx.status === 'approved' ? 'bg-emerald-50 text-emerald-500' :
-                      tx.status === 'pending' ? 'bg-amber-50 text-amber-500' :
-                      tx.status === 'rejected' ? 'bg-red-50 text-red-400' :
-                      'bg-stone-50 text-stone-400'
-                    }`}>
-                      <Activity size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-stone-800 text-sm">{tx.partnerName || 'Partner'}</h4>
-                      <p className="text-[9px] text-stone-400 font-medium mt-0.5 capitalize">{tx.category || '-'} • {tx.totalWeight || tx.weight || 0} kg</p>
-                      <p className="text-[9px] text-stone-400">{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('id-ID') : '-'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-emerald-600">+{tx.totalPoints || 0} NP</p>
-                      <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full mt-1 inline-block ${
-                        tx.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                        tx.status === 'pending' ? 'bg-amber-50 text-amber-600' :
-                        tx.status === 'rejected' ? 'bg-red-50 text-red-500' :
-                        'bg-stone-50 text-stone-500'
+                userTransactions.map((tx: any) => {
+                  const isLeaderboardReward = tx.type === 'leaderboard_reward';
+                  const isRejected = tx.status === 'rejected';
+                  const isApproved = isLeaderboardReward || tx.status === 'approved';
+                  const isPending = tx.status === 'pending';
+
+                  return (
+                    <div key={tx.id} className="bg-white p-5 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 hover:border-stone-200 transition-all">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                        isLeaderboardReward ? 'bg-amber-100/90 text-amber-600 ring-2 ring-amber-300/50' :
+                        isApproved ? 'bg-emerald-50 text-emerald-500' :
+                        isPending ? 'bg-amber-50 text-amber-500' :
+                        isRejected ? 'bg-red-50 text-red-500' :
+                        'bg-stone-50 text-stone-400'
                       }`}>
-                        {tx.status}
-                      </span>
+                        {isLeaderboardReward ? (
+                          <Trophy size={22} className="text-amber-600" />
+                        ) : isApproved ? (
+                          <CheckCircle2 size={22} className="text-emerald-500" />
+                        ) : isRejected ? (
+                          <XCircle size={22} className="text-red-500" />
+                        ) : isPending ? (
+                          <Clock size={22} className="text-amber-500" />
+                        ) : (
+                          <Activity size={24} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-stone-800 text-sm truncate">
+                            {tx.partnerName || (isLeaderboardReward ? 'Hadiah Papan Peringkat' : 'Bank Sampah')}
+                          </h4>
+                          {isLeaderboardReward && (
+                            <span className="text-[9px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                              Top 3
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-stone-500 font-medium mt-0.5 capitalize truncate">
+                          {isLeaderboardReward
+                            ? (tx.categoryLabel || 'Pemenang Papan Peringkat')
+                            : `${tx.category || '-'} • ${tx.totalWeight || tx.weight || 0} kg`}
+                        </p>
+                        <p className="text-[9px] text-stone-400">
+                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {isRejected ? (
+                          <>
+                            <p className="text-xs font-bold text-stone-400 line-through">
+                              +{tx.totalPoints || tx.points || 0} NP
+                            </p>
+                            <p className="text-[11px] font-black text-rose-500">
+                              +0 NP
+                            </p>
+                          </>
+                        ) : isPending ? (
+                          <p className="text-xs font-bold text-amber-600">
+                            +{tx.totalPoints || tx.points || 0} NP
+                          </p>
+                        ) : (
+                          <p className="text-xs font-bold text-emerald-600">
+                            +{tx.totalPoints || tx.points || 0} NP
+                          </p>
+                        )}
+                        <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full mt-1 inline-block ${
+                          isApproved ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          isPending ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                          isRejected ? 'bg-red-50 text-red-600 border border-red-200' :
+                          'bg-stone-50 text-stone-500'
+                        }`}>
+                          {isLeaderboardReward ? 'Diterima' :
+                           isApproved ? 'Disetujui' :
+                           isRejected ? 'Ditolak' :
+                           isPending ? 'Menunggu' :
+                           tx.status}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       {/* Modal Detail Riwayat Scan */}
       <AnimatePresence>
@@ -962,14 +1412,19 @@ const UserDashboard = ({ userData, onPointsClick, onBack, onDeleteHistory, onCle
               </div>
 
               <div className="w-full h-52 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 flex items-center justify-center relative shadow-inner">
-                {previewScan.image ? (
-                  <img src={previewScan.image} alt={previewScan.name} className="w-full h-full object-cover" />
+                {previewScan.image || (previewScan as any).photoUrl || (previewScan as any).imageUrl ? (
+                  <img src={previewScan.image || (previewScan as any).photoUrl || (previewScan as any).imageUrl} alt={previewScan.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-stone-400 gap-2 p-4 text-center">
-                    <Camera size={36} className="text-stone-300" />
-                    <p className="text-xs text-stone-500 font-bold">Foto Asli Tidak Tersimpan di Server</p>
-                    <p className="text-[10px] text-stone-400 max-w-xs leading-relaxed">
-                      Pada versi aplikasi 14 Oktober 2026, foto tidak disimpan ke database untuk mencegah limit kuota Firestore.
+                  <div className={`w-full h-full flex flex-col items-center justify-center p-5 text-center ${getScanVisual(previewScan.category, previewScan.name).bgColor}`}>
+                    <div className="w-14 h-14 rounded-2xl bg-white/90 shadow-sm flex items-center justify-center mb-2">
+                      {getScanVisual(previewScan.category, previewScan.name).icon}
+                    </div>
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-1.5 ${getScanVisual(previewScan.category, previewScan.name).badgeBg}`}>
+                      Kategori: {previewScan.category || getScanVisual(previewScan.category, previewScan.name).label}
+                    </span>
+                    <p className="text-xs text-stone-700 font-bold">Hasil Pemindaian AI Terverifikasi</p>
+                    <p className="text-[10px] text-stone-400 max-w-xs leading-relaxed mt-0.5">
+                      Data pemilahan dan kalkulasi dampak lingkungan tersimpan aman di akun Anda.
                     </p>
                   </div>
                 )}
@@ -1028,47 +1483,49 @@ const BottomNav = ({ active, onChange, onScan }: { active: AppState, onChange: (
   ];
 
   return (
-    <div className="fixed bottom-6 left-4 right-4 h-20 bg-stone-900/95 backdrop-blur-2xl rounded-4xl border border-white/10 shadow-2xl z-80 flex items-center justify-between px-2">
-      {tabs.map((tab) => {
-        const isActive = active === tab.id;
-        if (tab.isSpecial) {
+    <div className="fixed bottom-5 left-0 right-0 max-w-md mx-auto px-4 pointer-events-none z-80">
+      <div className="w-full h-20 bg-stone-900/95 backdrop-blur-2xl rounded-4xl border border-white/10 shadow-2xl pointer-events-auto flex items-center justify-between px-2">
+        {tabs.map((tab) => {
+          const isActive = active === tab.id;
+          if (tab.isSpecial) {
+            return (
+              <button
+                key={tab.id}
+                onClick={onScan}
+                className="relative -top-8 flex flex-col items-center cursor-pointer"
+              >
+                <div className="w-15 h-15 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-500/40 border-4 border-stone-900 active:scale-90 transition-transform">
+                  <Camera size={26} />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mt-1">Pindai</span>
+              </button>
+            );
+          }
           return (
             <button
               key={tab.id}
-              onClick={onScan}
-              className="relative -top-10 flex flex-col items-center"
+              onClick={() => onChange(tab.id as AppState)}
+              className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 cursor-pointer ${isActive ? 'text-emerald-400' : 'text-stone-500 hover:text-stone-300'
+                }`}
             >
-              <div className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-500/40 border-4 border-stone-900 active:scale-90 transition-transform">
-                <Camera size={28} />
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mt-2">Pindai</span>
+              <motion.div
+                animate={isActive ? { y: -2, scale: 1.1 } : { y: 0, scale: 1 }}
+              >
+                <tab.icon size={20} />
+              </motion.div>
+              <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                {tab.label}
+              </span>
+              {isActive && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute -bottom-1 w-1 h-1 bg-emerald-400 rounded-full"
+                />
+              )}
             </button>
           );
-        }
-        return (
-          <button
-            key={tab.id}
-            onClick={() => onChange(tab.id as AppState)}
-            className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-300 flex-1 ${isActive ? 'text-emerald-400' : 'text-stone-500 hover:text-stone-300'
-              }`}
-          >
-            <motion.div
-              animate={isActive ? { y: -2, scale: 1.1 } : { y: 0, scale: 1 }}
-            >
-              <tab.icon size={20} />
-            </motion.div>
-            <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-40'}`}>
-              {tab.label}
-            </span>
-            {isActive && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute -bottom-1 w-1 h-1 bg-emerald-400 rounded-full"
-              />
-            )}
-          </button>
-        );
-      })}
+        })}
+      </div>
     </div>
   );
 };
@@ -2156,13 +2613,17 @@ const WasteBankVerify = ({
 };
 
 const NotificationModal = ({
-  notifications,
+  notifications = [],
   onClose,
-  onMarkAsRead
+  onMarkAsRead,
+  onDeleteNotification,
+  onClearAllNotifications
 }: {
-  notifications: NotificationItem[],
-  onClose: () => void,
-  onMarkAsRead: (id: string) => void
+  notifications: NotificationItem[];
+  onClose: () => void;
+  onMarkAsRead: (id: string) => void;
+  onDeleteNotification?: (id: string) => void;
+  onClearAllNotifications?: () => void;
 }) => {
   return (
     <motion.div
@@ -2172,22 +2633,45 @@ const NotificationModal = ({
       className="fixed inset-0 bg-stone-50 z-120 overflow-y-auto"
     >
       <div className="p-6 max-w-md mx-auto min-h-screen flex flex-col">
-        <header className="flex items-center justify-between mb-8 sticky top-0 bg-stone-50/80 backdrop-blur-md py-4 z-10">
-          <button
-            onClick={onClose}
-            className="p-3 bg-white rounded-2xl text-stone-400 shadow-sm border border-stone-100 active:scale-95 transition-transform"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h2 className="text-xl font-display font-bold text-stone-800">Notifikasi</h2>
-          <div className="w-10" />
+        <header className="flex items-center justify-between mb-6 sticky top-0 bg-stone-50/90 backdrop-blur-md py-4 z-10 border-b border-stone-200/60">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-3 bg-white rounded-2xl text-stone-600 shadow-xs border border-stone-200 active:scale-95 transition-transform cursor-pointer"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h2 className="text-xl font-display font-black text-stone-900">Notifikasi</h2>
+              <p className="text-[10px] text-stone-500 font-medium">
+                {notifications.length} Pesan {notifications.filter(n => !n.isRead).length > 0 && `• ${notifications.filter(n => !n.isRead).length} belum dibaca`}
+              </p>
+            </div>
+          </div>
+
+          {/* Tombol Hapus Semua Notifikasi */}
+          {notifications.length > 0 && onClearAllNotifications && (
+            <button
+              type="button"
+              onClick={onClearAllNotifications}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold border border-red-200/80 transition-all cursor-pointer active:scale-95"
+              title="Hapus semua riwayat notifikasi"
+            >
+              <Trash2 size={13} />
+              <span>Hapus Semua</span>
+            </button>
+          )}
         </header>
 
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-3.5 pb-20">
           {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 opacity-30">
-              <Bell size={64} className="mb-4" />
-              <p className="font-bold text-sm uppercase tracking-widest">Belum ada notifikasi</p>
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="w-20 h-20 rounded-full bg-stone-100 text-stone-400 flex items-center justify-center mb-4">
+                <Bell size={36} className="opacity-50" />
+              </div>
+              <h4 className="font-display font-black text-stone-800 text-base mb-1">Tidak Ada Notifikasi</h4>
+              <p className="text-stone-400 text-xs max-w-xs font-medium">Kotak masuk notifikasi Anda bersih. Semua update transaksi dan akun akan muncul di sini.</p>
             </div>
           ) : (
             notifications.map((n) => (
@@ -2195,24 +2679,50 @@ const NotificationModal = ({
                 key={n.id}
                 layout
                 onClick={() => onMarkAsRead(n.id)}
-                className={`p-5 rounded-4xl border transition-all cursor-pointer ${n.isRead ? 'bg-white border-stone-100' : 'bg-emerald-50 border-emerald-100 shadow-md shadow-emerald-100/50'
-                  }`}
+                className={`p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer relative group ${
+                  n.isRead ? 'bg-white border-stone-200/80 shadow-xs' : 'bg-emerald-50/70 border-emerald-200 shadow-sm'
+                }`}
               >
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${n.type === 'success' ? 'bg-emerald-100 text-emerald-600' :
-                    n.type === 'warning' ? 'bg-red-100 text-red-600' :
-                      'bg-blue-100 text-blue-600'
-                    }`}>
-                    {n.type === 'success' ? <CheckCircle size={24} /> : n.type === 'warning' ? <AlertTriangle size={24} /> : <Info size={24} />}
+                <div className="flex items-start gap-3.5">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border ${
+                    n.type === 'success' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' :
+                    n.type === 'warning' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                    'bg-blue-100 text-blue-600 border-blue-200'
+                  }`}>
+                    {n.type === 'success' ? <CheckCircle size={22} /> : n.type === 'warning' ? <AlertTriangle size={22} /> : <Info size={22} />}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-stone-800 text-sm leading-tight">{n.title}</h4>
-                      {!n.isRead && <span className="w-2 h-2 bg-emerald-500 rounded-full shrink-0" />}
+
+                  <div className="flex-1 min-w-0 pr-6">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <h4 className="font-display font-black text-stone-900 text-xs sm:text-sm leading-tight truncate">
+                        {n.title}
+                      </h4>
+                      {!n.isRead && (
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full shrink-0 animate-pulse" />
+                      )}
                     </div>
-                    <p className="text-xs text-stone-500 leading-relaxed mb-2">{n.message}</p>
-                    <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{n.date}</p>
+                    <p className="text-xs text-stone-600 leading-relaxed font-medium mb-2 break-words">
+                      {n.message}
+                    </p>
+                    <p className="text-[10px] font-mono font-bold text-stone-400 uppercase tracking-wider">
+                      {n.date}
+                    </p>
                   </div>
+
+                  {/* Tombol Hapus Notifikasi Satuan */}
+                  {onDeleteNotification && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteNotification(n.id);
+                      }}
+                      className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-stone-100 hover:bg-red-50 text-stone-400 hover:text-red-600 flex items-center justify-center transition-all cursor-pointer active:scale-90"
+                      title="Hapus notifikasi ini"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </motion.div>
             ))
@@ -2833,6 +3343,8 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [resetPasswordTarget, setResetPasswordTarget] = useState<{ uid: string; name: string; email: string; role: string } | null>(null);
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState('');
+  const [activityFilter, setActivityFilter] = useState<'all' | 'scan' | 'deposit' | 'claim' | 'mission'>('all');
+  const [activitySearchQuery, setActivitySearchQuery] = useState('');
 
   useEffect(() => {
     import('./services/missionService').then(({ getMissions }) => {
@@ -3434,52 +3946,203 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
       };
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const allClaims = users.flatMap(u => (u.claimHistory || []).map(c => ({ ...c, userEmail: u.email, userUid: u.uid, displayName: u.displayName })));
-  const allScans = users.flatMap(u => (u.scanHistory || []).map(s => ({
+
+  const parseActivityTimestamp = (dateVal: any): number => {
+    if (!dateVal) return 0;
+    if (typeof dateVal === 'number') return dateVal;
+    if (dateVal?.seconds) return dateVal.seconds * 1000;
+    if (dateVal?.toMillis && typeof dateVal.toMillis === 'function') return dateVal.toMillis();
+    if (typeof dateVal !== 'string') return 0;
+
+    const trimmed = dateVal.trim();
+    const direct = Date.parse(trimmed);
+    if (!isNaN(direct) && trimmed.includes('-') && direct > 0) return direct;
+
+    const idMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2})[:.](\d{1,2})(?:[:.](\d{1,2}))?)?/);
+    if (idMatch) {
+      const day = parseInt(idMatch[1], 10);
+      const month = parseInt(idMatch[2], 10) - 1;
+      const year = parseInt(idMatch[3], 10);
+      const hour = idMatch[4] ? parseInt(idMatch[4], 10) : 0;
+      const minute = idMatch[5] ? parseInt(idMatch[5], 10) : 0;
+      const second = idMatch[6] ? parseInt(idMatch[6], 10) : 0;
+      return new Date(year, month, day, hour, minute, second).getTime();
+    }
+
+    const monthNames: Record<string, number> = {
+      jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6,
+      agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11
+    };
+    const textMatch = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+    if (textMatch) {
+      const day = parseInt(textMatch[1], 10);
+      const mKey = textMatch[2].toLowerCase().substring(0, 3);
+      const month = monthNames[mKey] ?? 0;
+      const year = parseInt(textMatch[3], 10);
+      return new Date(year, month, day).getTime();
+    }
+
+    return !isNaN(direct) ? direct : 0;
+  };
+
+  const formatActivityDate = (dateVal: any): { date: string; time: string } => {
+    const ts = parseActivityTimestamp(dateVal);
+    if (ts > 0) {
+      const d = new Date(ts);
+      const day = d.getDate().toString().padStart(2, '0');
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const month = monthNames[d.getMonth()];
+      const year = d.getFullYear();
+      const hours = d.getHours().toString().padStart(2, '0');
+      const mins = d.getMinutes().toString().padStart(2, '0');
+      return {
+        date: `${day} ${month} ${year}`,
+        time: `${hours}:${mins} WIB`
+      };
+    }
+    const str = String(dateVal || '-');
+    return { date: str, time: '' };
+  };
+
+  const allClaims = users.flatMap(u => (u.claimHistory || []).map((c: any) => ({
+    ...c,
+    userEmail: u.email,
+    userUid: u.uid,
+    displayName: u.displayName,
+    image: c.image || c.photoUrl || ''
+  })));
+
+  const allScans = users.flatMap(u => (u.scanHistory || []).map((s: any) => ({
     ...s,
     type: 'Scan AI' as const,
     userEmail: u.email,
     userUid: u.uid,
-    displayName: u.displayName
+    displayName: u.displayName,
+    image: s.image || s.photoUrl || s.photo || s.thumbnailBase64 || ''
   })));
-  const allActivities = [
+
+  const allMissions = allMissionProgress
+    .filter(p => p.completed || p.current > 0 || p.proofStatus === 'pending_review' || p.proofStatus === 'approved')
+    .map(p => {
+      const u = users.find(u => u.uid === p.userId);
+      const m = missions.find(m => m.id === p.missionId);
+      const isQuiz = m?.type === 'quiz';
+      const dateVal = p.completedAt || p.updatedAt || p.createdAt || '';
+      return {
+        id: `mission_${p.userId}_${p.missionId}`,
+        type: (isQuiz ? 'Quiz Komunitas' : 'Misi Lingkungan') as any,
+        title: m?.title || 'Misi Lingkungan',
+        category: isQuiz ? 'Quiz' : 'Misi',
+        status: (p.completed || p.proofStatus === 'approved' ? 'Success' : p.proofStatus === 'pending_review' ? 'Pending' : 'Progress') as any,
+        points: p.completed ? (m?.rewardPoints || 100) : 0,
+        date: dateVal,
+        timestamp: parseActivityTimestamp(dateVal),
+        userEmail: u?.email || '-',
+        displayName: u?.displayName || 'User',
+        extra: m?.description || (isQuiz ? 'Quiz Edukasi Terjawab' : 'Misi Harian Selesai'),
+        image: p.proofPhoto || p.proofImage || ''
+      };
+    });
+
+  const allPartnerTxs = transactions
+    .filter((tx: any) => tx.status === 'approved' || tx.status === 'completed' || tx.status === 'flagged')
+    .map((tx: any) => {
+      const partner = partners.find((p: any) => p.ownerUid === tx.partnerUid || p.id === tx.partnerId);
+      const txUser = users.find(u => u.uid === tx.userUid || u.qrToken === tx.userToken);
+      const dateVal = tx.createdAt || tx.date || '';
+      return {
+        id: `tx_${tx.id}`,
+        type: 'Setoran Mitra' as any,
+        title: `${tx.weight || tx.totalWeight || 0} kg (${tx.category || 'Campuran'})`,
+        category: 'Setoran Fisik',
+        status: tx.status === 'approved' || tx.status === 'completed' ? 'Success' : tx.status === 'flagged' ? 'Rejected' : 'Pending',
+        points: tx.points || tx.totalPoints || 0,
+        date: dateVal,
+        timestamp: parseActivityTimestamp(dateVal),
+        userEmail: txUser?.email || tx.userToken || '-',
+        displayName: txUser?.displayName || tx.userName || 'User',
+        extra: partner?.name || tx.partnerName || 'Bank Sampah',
+        image: tx.photoUrl || tx.image || tx.proofImage || ''
+      };
+    });
+
+  const allActivitiesRaw = [
     ...allScans.map(item => ({
-      id: item.id,
-      type: item.type,
-      title: item.name,
+      id: item.id || `scan_${Math.random()}`,
+      type: 'Scan AI' as const,
+      title: item.name || 'Pemindaian Sampah',
+      category: item.category || 'Scan AI',
       status: 'Success' as const,
       points: 25,
       date: item.date,
+      timestamp: parseActivityTimestamp(item.date),
       userEmail: item.userEmail,
       displayName: item.displayName,
       extra: item.category,
-      image: item.image
+      image: item.image || item.photoUrl || item.photo || ''
     })),
     ...allDeposits.map(item => ({
-      id: item.id,
+      id: item.id || `dep_${Math.random()}`,
       type: 'Setoran TPA' as const,
-      title: `${item.totalWeight.toFixed(1)} kg - ${item.status}`,
+      title: `${Number(item.totalWeight || 0).toFixed(1)} kg - ${item.status}`,
+      category: 'Setoran Fisik',
       status: item.status,
-      points: item.totalPoints,
+      points: item.totalPoints || 0,
       date: item.date,
+      timestamp: parseActivityTimestamp(item.date),
       userEmail: item.userEmail,
       displayName: item.displayName,
       extra: item.location || 'Lokasi belum diisi',
-      image: item.image
+      image: item.image || item.photoUrl || ''
     })),
     ...allClaims.map(item => ({
-      id: item.id,
+      id: item.id || `claim_${Math.random()}`,
       type: 'Klaim Hadiah' as const,
-      title: item.title,
+      title: item.title || 'Klaim Hadiah',
+      category: 'Tukar Poin',
       status: item.status,
-      points: item.points,
+      points: item.points || 0,
       date: item.date,
+      timestamp: parseActivityTimestamp(item.date),
       userEmail: item.userEmail,
       displayName: item.displayName,
       extra: item.title,
-      image: undefined
-    }))
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      image: item.image || item.photoUrl || ''
+    })),
+    ...allMissions,
+    ...allPartnerTxs
+  ];
+
+  const seenActivityIds = new Set<string>();
+  const allActivities = allActivitiesRaw
+    .filter(item => {
+      if (!item.id || seenActivityIds.has(item.id)) return false;
+      seenActivityIds.add(item.id);
+      return true;
+    })
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  const filteredActivities = useMemo(() => {
+    return allActivities.filter(item => {
+      let typeMatch = true;
+      if (activityFilter === 'scan') typeMatch = item.type === 'Scan AI';
+      else if (activityFilter === 'deposit') typeMatch = item.type === 'Setoran TPA' || item.type === 'Setoran Mitra';
+      else if (activityFilter === 'claim') typeMatch = item.type === 'Klaim Hadiah';
+      else if (activityFilter === 'mission') typeMatch = item.type === 'Misi Lingkungan' || item.type === 'Quiz Komunitas';
+
+      let searchMatch = true;
+      if (activitySearchQuery.trim()) {
+        const q = activitySearchQuery.toLowerCase();
+        searchMatch =
+          Boolean(item.displayName && item.displayName.toLowerCase().includes(q)) ||
+          Boolean(item.userEmail && item.userEmail.toLowerCase().includes(q)) ||
+          Boolean(item.title && item.title.toLowerCase().includes(q)) ||
+          Boolean(item.extra && item.extra.toLowerCase().includes(q));
+      }
+
+      return typeMatch && searchMatch;
+    });
+  }, [allActivities, activityFilter, activitySearchQuery]);
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col font-sans">
@@ -3531,53 +4194,114 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           ))}
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-10 bg-stone-200/50 p-1.5 rounded-3xl w-fit flex-wrap">
-          {[
-            { id: 'users', label: 'Daftar User', icon: User },
-            { id: 'partners', label: 'Verifikasi Partner', icon: Recycle },
-            { id: 'flagged_txs', label: 'Transaksi Flagged', icon: AlertTriangle },
-            { id: 'deposits', label: 'Verifikasi Setoran', icon: Clock },
-            { id: 'partner_activity', label: 'Aktivitas Bank Sampah', icon: Activity },
-            { id: 'claims', label: 'Persetujuan Klaim', icon: Award },
-            { id: 'activity', label: 'Semua Aktivitas', icon: BarChart3 },
-            { id: 'missions', label: 'Kelola Misi', icon: Sparkles },
-            { id: 'articles', label: 'Artikel', icon: BookOpen },
-            { id: 'mission_activity', label: 'Aktivitas Misi', icon: Award },
-            { id: 'rewards', label: 'Kelola Reward', icon: Gift },
-            { id: 'error_logs', label: 'Error Logs', icon: Bug },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-3 px-8 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-stone-900 shadow-xl' : 'text-stone-500 hover:text-stone-800'
-                }`}
-            >
-              <tab.icon size={18} />
-              {tab.label}
-              {tab.id === 'partners' && partners.filter(p => p.status === 'pending').length > 0 && (
-                <span className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[10px] animate-pulse">
-                  {partners.filter(p => p.status === 'pending').length}
-                </span>
-              )}
-              {tab.id === 'flagged_txs' && transactions.filter(t => t.status === 'flagged' || t.status === 'flagged_offline').length > 0 && (
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest">
-                  {transactions.filter(t => t.status === 'flagged' || t.status === 'flagged_offline').length}
-                </span>
-              )}
-              {tab.id === 'deposits' && manualDeposits.filter(d => d.status === 'Pending').length > 0 && (
-                <span className="w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center text-[10px] animate-pulse">
-                  {manualDeposits.filter(d => d.status === 'Pending').length}
-                </span>
-              )}
-              {tab.id === 'mission_activity' && allMissionProgress.filter(p => p.proofStatus === 'pending_review').length > 0 && (
-                <span className="w-5 h-5 bg-orange-500 text-white rounded-full flex items-center justify-center text-[10px] animate-pulse">
-                  {allMissionProgress.filter(p => p.proofStatus === 'pending_review').length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {/* Modern Categorized Tab Navigation */}
+        {(() => {
+          const tabCategories = [
+            {
+              id: 'monitoring',
+              label: 'Monitoring & Log',
+              icon: BarChart3,
+              tabs: [
+                { id: 'activity', label: 'Semua Aktivitas', icon: BarChart3 },
+                { id: 'mission_activity', label: 'Aktivitas Misi', icon: Award, badge: allMissionProgress.filter(p => p.proofStatus === 'pending_review').length },
+                { id: 'error_logs', label: 'Error Logs', icon: Bug },
+              ]
+            },
+            {
+              id: 'transactions',
+              label: 'Setoran & Verifikasi',
+              icon: Clock,
+              tabs: [
+                { id: 'deposits', label: 'Verifikasi Setoran', icon: Clock, badge: manualDeposits.filter(d => d.status === 'Pending').length },
+                { id: 'flagged_txs', label: 'Transaksi Flagged', icon: AlertTriangle, badge: transactions.filter(t => t.status === 'flagged' || t.status === 'flagged_offline').length },
+                { id: 'partner_activity', label: 'Aktivitas Bank Sampah', icon: Activity },
+                { id: 'claims', label: 'Persetujuan Klaim', icon: Award, badge: allClaims.filter(c => c.status === 'Pending').length },
+              ]
+            },
+            {
+              id: 'users',
+              label: 'Pengguna & Mitra',
+              icon: User,
+              tabs: [
+                { id: 'users', label: 'Daftar User', icon: User },
+                { id: 'partners', label: 'Verifikasi Partner', icon: Recycle, badge: partners.filter(p => p.status === 'pending').length },
+              ]
+            },
+            {
+              id: 'content',
+              label: 'Konten & Gamifikasi',
+              icon: Sparkles,
+              tabs: [
+                { id: 'missions', label: 'Kelola Misi', icon: Sparkles },
+                { id: 'articles', label: 'Artikel Edukasi', icon: BookOpen },
+                { id: 'rewards', label: 'Kelola Reward', icon: Gift },
+              ]
+            }
+          ];
+
+          const activeCategory = tabCategories.find(cat => cat.tabs.some(t => t.id === activeTab)) || tabCategories[0];
+
+          return (
+            <div className="bg-white rounded-3xl p-3 border border-stone-200/80 shadow-xs mb-8">
+              {/* Level 1: Category Selector */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 pb-3 border-b border-stone-100">
+                {tabCategories.map((cat) => {
+                  const isCatActive = activeCategory.id === cat.id;
+                  const totalCatBadge = cat.tabs.reduce((sum, t) => sum + (t.badge || 0), 0);
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        if (cat.tabs[0]) setActiveTab(cat.tabs[0].id as any);
+                      }}
+                      className={`flex items-center justify-between px-4 py-3 rounded-2xl font-bold text-xs transition-all cursor-pointer ${
+                        isCatActive
+                          ? 'bg-emerald-800 text-white shadow-md shadow-emerald-950/20'
+                          : 'bg-stone-50 text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate">
+                        <cat.icon size={16} className={isCatActive ? 'text-emerald-300' : 'text-stone-400'} />
+                        <span className="truncate">{cat.label}</span>
+                      </div>
+                      {totalCatBadge > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse">
+                          {totalCatBadge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Level 2: Sub-tabs of Active Category */}
+              <div className="flex items-center gap-2 pt-3 flex-wrap">
+                {activeCategory.tabs.map((tab) => {
+                  const isTabActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                        isTabActive
+                          ? 'bg-stone-900 text-white shadow-sm'
+                          : 'bg-stone-100/80 text-stone-600 hover:bg-stone-200/70 hover:text-stone-900'
+                      }`}
+                    >
+                      <tab.icon size={14} />
+                      <span>{tab.label}</span>
+                      {tab.badge !== undefined && tab.badge > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white">
+                          {tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -4291,94 +5015,250 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             {activeTab === 'activity' && (
               <motion.div
                 key="activity-all"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-[48px] border border-stone-100 shadow-xl overflow-hidden"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="space-y-6"
               >
-                {allActivities.length === 0 ? (
-                  <div className="p-16 text-center">
-                    <BarChart3 size={48} className="text-stone-200 mx-auto mb-4" />
-                    <p className="text-stone-400 font-bold">Belum ada aktivitas tercatat.</p>
+                {/* Header & Quick Stats */}
+                <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          Audit Trail & Timeline
+                        </span>
+                        <span className="text-xs text-stone-400">· Real-time Sync</span>
+                      </div>
+                      <h2 className="text-xl font-display font-black text-stone-900">Semua Aktivitas Ekosistem</h2>
+                      <p className="text-xs text-stone-500">Rekap riwayat seluruh aktivitas: Scan AI, Setoran Fisik, Misi Lingkungan, dan Penukaran Hadiah.</p>
+                    </div>
+
+                    {/* Quick Metric Pills */}
+                    <div className="flex flex-wrap gap-2">
+                      <div className="bg-stone-50 px-3.5 py-2 rounded-2xl border border-stone-200/70 text-center">
+                        <p className="text-[10px] font-bold text-stone-400 uppercase">Total Log</p>
+                        <p className="text-base font-display font-black text-stone-800">{allActivities.length}</p>
+                      </div>
+                      <div className="bg-blue-50 px-3.5 py-2 rounded-2xl border border-blue-100 text-center">
+                        <p className="text-[10px] font-bold text-blue-500 uppercase">Scan AI</p>
+                        <p className="text-base font-display font-black text-blue-700">
+                          {allActivities.filter(a => a.type === 'Scan AI').length}
+                        </p>
+                      </div>
+                      <div className="bg-emerald-50 px-3.5 py-2 rounded-2xl border border-emerald-100 text-center">
+                        <p className="text-[10px] font-bold text-emerald-600 uppercase">Setoran</p>
+                        <p className="text-base font-display font-black text-emerald-800">
+                          {allActivities.filter(a => a.type === 'Setoran TPA' || (a.type as any) === 'Setoran Mitra').length}
+                        </p>
+                      </div>
+                      <div className="bg-purple-50 px-3.5 py-2 rounded-2xl border border-purple-100 text-center">
+                        <p className="text-[10px] font-bold text-purple-600 uppercase">Misi / Quiz</p>
+                        <p className="text-base font-display font-black text-purple-800">
+                          {allActivities.filter(a => (a.type as any) === 'Misi Lingkungan' || (a.type as any) === 'Quiz Komunitas').length}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <table className="w-full text-left">
-                    <thead className="bg-stone-50/80 border-b border-stone-100">
-                      <tr>
-                        <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Pengguna</th>
-                        <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Aktivitas</th>
-                        <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Bukti Foto</th>
-                        <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Tanggal</th>
-                        <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Poin</th>
-                        <th className="px-8 py-6 text-[10px] font-black text-stone-400 uppercase tracking-widest">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-50">
-                      {allActivities.map((item, i) => (
-                        <tr key={`${item.id}-${i}`} className="hover:bg-stone-50/50 transition-colors">
-                          <td className="px-8 py-5">
-                            <p className="font-bold text-stone-800 text-sm">{item.displayName || item.userEmail}</p>
-                            <p className="text-[10px] text-stone-400">{item.userEmail}</p>
-                          </td>
-                          <td className="px-8 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                                item.type === 'Scan AI' ? 'bg-blue-50 text-blue-600' :
-                                item.type === 'Setoran TPA' ? 'bg-emerald-50 text-emerald-600' :
-                                'bg-amber-50 text-amber-600'
-                              }`}>
-                                {item.type === 'Scan AI' ? <Camera size={16} /> : item.type === 'Setoran TPA' ? <Recycle size={16} /> : <Award size={16} />}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{item.type}</p>
-                                <p className="font-bold text-stone-800 text-sm truncate max-w-45">{item.title}</p>
-                                {item.type === 'Setoran TPA' && (
-                                  <p className="text-[9px] text-stone-500 font-bold">Mitra: {item.extra}</p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-8 py-5">
-                            {item.image ? (
-                              <button onClick={() => setSelectedPhotoPreview({ image: item.image || '', user: item.displayName || item.userEmail || 'User', title: item.title || item.type, date: item.date })} className="inline-block group/thumb">
-                                <img 
-                                  src={normalizePhotoUrl(item.image)} 
-                                  alt="Bukti Aktivitas" 
-                                  className="w-10 h-10 object-cover rounded-lg border border-stone-200 group-hover/thumb:scale-110 group-hover/thumb:shadow-md transition-all duration-200" 
-                                />
-                              </button>
-                            ) : (
-                              <span className="text-stone-300 text-xs italic">-</span>
-                            )}
-                          </td>
-                          <td className="px-8 py-5">
-                            <p className="text-xs text-stone-500 font-medium">{item.date}</p>
-                          </td>
-                          <td className="px-8 py-5">
-                            <p className={`font-display font-black text-lg ${
-                              item.type === 'Klaim Hadiah' ? 'text-red-500' : 'text-emerald-600'
-                            }`}>
-                              {item.type === 'Klaim Hadiah' ? '-' : '+'}{item.points?.toLocaleString()} NP
-                            </p>
-                          </td>
-                          <td className="px-8 py-5">
-                            <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                              item.status === 'Success' || item.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
-                              item.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                              item.status === 'Rejected' ? 'bg-red-100 text-red-600' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {item.status === 'Success' ? 'Diterima' :
-                               item.status === 'Approved' ? 'Diterima' :
-                               item.status === 'Pending' ? 'Menunggu' :
-                               item.status === 'Rejected' ? 'Ditolak' : item.status}
-                            </span>
-                          </td>
-                        </tr>
+
+                  {/* Filter & Search Bar */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-stone-100">
+                    {/* Search Input */}
+                    <div className="relative flex-1 max-w-md">
+                      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                      <input
+                        type="text"
+                        value={activitySearchQuery}
+                        onChange={(e) => setActivitySearchQuery(e.target.value)}
+                        placeholder="Cari user, email, nama sampah, atau mitra..."
+                        className="w-full pl-10 pr-8 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                      />
+                      {activitySearchQuery && (
+                        <button
+                          onClick={() => setActivitySearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 text-xs cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                      {[
+                        { id: 'all', label: 'Semua' },
+                        { id: 'scan', label: 'Scan AI' },
+                        { id: 'deposit', label: 'Setoran' },
+                        { id: 'claim', label: 'Klaim Hadiah' },
+                        { id: 'mission', label: 'Misi & Quiz' }
+                      ].map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => setActivityFilter(f.id as any)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                            activityFilter === f.id
+                              ? 'bg-stone-900 text-white shadow-xs'
+                              : 'bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-900'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
                       ))}
-                    </tbody>
-                  </table>
-                )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Activities Table Card */}
+                <div className="bg-white rounded-3xl border border-stone-200/80 shadow-xs overflow-hidden">
+                  {filteredActivities.length === 0 ? (
+                    <div className="p-16 text-center">
+                      <BarChart3 size={48} className="text-stone-300 mx-auto mb-3" />
+                      <p className="text-stone-700 font-bold text-base mb-1">Tidak ada aktivitas ditemukan</p>
+                      <p className="text-stone-400 text-xs">Coba ubah kata kunci pencarian atau filter tipe aktivitas.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-stone-50 border-b border-stone-200/70">
+                          <tr>
+                            <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Pengguna</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Aktivitas</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Bukti Foto / Visual</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Tanggal & Waktu</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Mutasi Poin</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-stone-500 uppercase tracking-wider">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100 text-sm">
+                          {filteredActivities.slice(0, 100).map((item, i) => {
+                            const dateInfo = formatActivityDate(item.date);
+                            const isOrganik = item.extra === 'Organik' || item.title?.toLowerCase().includes('banana') || item.title?.toLowerCase().includes('hotdog') || item.title?.toLowerCase().includes('buah') || item.title?.toLowerCase().includes('makanan');
+                            const isPlastik = item.extra === 'Plastik' || item.title?.toLowerCase().includes('botol') || item.title?.toLowerCase().includes('bottle') || item.title?.toLowerCase().includes('bucket') || item.title?.toLowerCase().includes('pail');
+                            const isKertas = item.extra === 'Kertas' || item.title?.toLowerCase().includes('buku') || item.title?.toLowerCase().includes('kardus') || item.title?.toLowerCase().includes('karton');
+                            const isLogam = item.extra === 'Logam' || item.title?.toLowerCase().includes('logam') || item.title?.toLowerCase().includes('kaleng') || item.title?.toLowerCase().includes('besi');
+
+                            return (
+                              <tr key={`${item.id}-${i}`} className="hover:bg-stone-50/80 transition-colors">
+                                {/* Pengguna */}
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 uppercase">
+                                      {(item.displayName || item.userEmail || 'U').substring(0, 2)}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-stone-900 text-xs sm:text-sm truncate max-w-[180px]">{item.displayName || item.userEmail}</p>
+                                      <p className="text-[10px] text-stone-400 truncate max-w-[180px]">{item.userEmail}</p>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Aktivitas */}
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                      item.type === 'Scan AI' ? 'bg-blue-50 text-blue-600' :
+                                      item.type === 'Setoran TPA' || (item.type as any) === 'Setoran Mitra' ? 'bg-emerald-50 text-emerald-600' :
+                                      (item.type as any) === 'Misi Lingkungan' || (item.type as any) === 'Quiz Komunitas' ? 'bg-purple-50 text-purple-600' :
+                                      'bg-amber-50 text-amber-600'
+                                    }`}>
+                                      {item.type === 'Scan AI' ? <Camera size={16} /> :
+                                       item.type === 'Setoran TPA' || (item.type as any) === 'Setoran Mitra' ? <Recycle size={16} /> :
+                                       (item.type as any) === 'Misi Lingkungan' || (item.type as any) === 'Quiz Komunitas' ? <Sparkles size={16} /> :
+                                       <Award size={16} />}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest block">{item.type}</span>
+                                      <p className="font-bold text-stone-900 text-xs sm:text-sm truncate max-w-[200px]">{item.title}</p>
+                                      {item.extra && (
+                                        <p className="text-[10px] text-stone-500 font-medium truncate max-w-[200px]">{item.extra}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Bukti Foto / Visual */}
+                                <td className="px-6 py-4">
+                                  {item.image ? (
+                                    <button
+                                      onClick={() => setSelectedPhotoPreview({
+                                        image: item.image || '',
+                                        user: item.displayName || item.userEmail || 'User',
+                                        title: item.title || item.type,
+                                        date: item.date
+                                      })}
+                                      className="inline-block group/thumb cursor-pointer"
+                                      title="Klik untuk memperbesar foto bukti"
+                                    >
+                                      <img
+                                        src={normalizePhotoUrl(item.image)}
+                                        alt="Bukti Foto"
+                                        className="w-11 h-11 object-cover rounded-xl border-2 border-stone-200 group-hover/thumb:border-emerald-500 group-hover/thumb:scale-110 shadow-xs transition-all duration-200"
+                                      />
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5" title="Data arsip scan AI (foto kompresi lama tidak disimpan)">
+                                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                                        isOrganik ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
+                                        isPlastik ? 'bg-blue-50 border-blue-200 text-blue-600' :
+                                        isKertas ? 'bg-amber-50 border-amber-200 text-amber-600' :
+                                        isLogam ? 'bg-slate-100 border-slate-200 text-slate-600' :
+                                        'bg-stone-100 border-stone-200 text-stone-500'
+                                      }`}>
+                                        {isOrganik ? <Leaf size={15} /> :
+                                         isPlastik ? <Recycle size={15} /> :
+                                         isKertas ? <FileText size={15} /> :
+                                         isLogam ? <Package size={15} /> :
+                                         <Camera size={15} />}
+                                      </div>
+                                      <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md">Arsip AI</span>
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Tanggal & Waktu */}
+                                <td className="px-6 py-4">
+                                  <p className="text-xs font-bold text-stone-800">{dateInfo.date}</p>
+                                  {dateInfo.time && (
+                                    <p className="text-[10px] text-stone-400 font-medium">{dateInfo.time}</p>
+                                  )}
+                                </td>
+
+                                {/* Poin */}
+                                <td className="px-6 py-4">
+                                  <p className={`font-display font-black text-sm sm:text-base ${
+                                    item.type === 'Klaim Hadiah' ? 'text-rose-500' : 'text-emerald-600'
+                                  }`}>
+                                    {item.type === 'Klaim Hadiah' ? '-' : '+'}{Math.abs(item.points || 0).toLocaleString()} NP
+                                  </p>
+                                </td>
+
+                                {/* Status */}
+                                <td className="px-6 py-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                    item.status === 'Success' || item.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
+                                    item.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
+                                    item.status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
+                                    'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {item.status === 'Success' || item.status === 'Approved' ? 'Diterima' :
+                                     item.status === 'Pending' ? 'Menunggu' :
+                                     item.status === 'Rejected' ? 'Ditolak' : item.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Footer Table Info */}
+                  <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
+                    <span>Menampilkan {Math.min(filteredActivities.length, 100)} dari {filteredActivities.length} aktivitas</span>
+                    <span className="text-[11px] text-stone-400">Urut berdasarkan tanggal & waktu terbaru</span>
+                  </div>
+                </div>
               </motion.div>
             )}
             {activeTab === 'missions' && (
@@ -5725,7 +6605,7 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setOpen(true)}
-          className="fixed bottom-28 right-4 z-90 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-300 flex items-center justify-center"
+          className="fixed bottom-28 md:bottom-8 right-4 md:right-8 z-90 w-14 h-14 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-full shadow-xl shadow-emerald-600/30 border-2 border-white/80 flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
         >
           <Sparkles size={24} />
         </motion.button>
@@ -5738,7 +6618,7 @@ const NeuroBot = ({ userData }: { userData: UserData }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25 }}
-            className="fixed bottom-24 right-4 left-4 z-90 bg-white rounded-4xl shadow-2xl border border-stone-100 flex flex-col overflow-hidden"
+            className="fixed bottom-24 md:bottom-24 right-4 left-4 md:left-auto md:right-8 md:w-[420px] z-90 bg-white rounded-4xl shadow-2xl border border-stone-100 flex flex-col overflow-hidden"
             style={{ maxHeight: '70vh' }}
           >
             <div className="flex items-center justify-between px-5 py-4 bg-emerald-600 text-white">
@@ -5952,15 +6832,49 @@ const ReadingTimer = ({
   const notificationsBootstrappedRef = useRef(false);
   const authHandledRef = useRef(false);
 
+  // View Mode: Desktop vs Mobile
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('neurocycle_view_mode');
+      if (saved === 'desktop' || saved === 'mobile') return saved;
+      return window.innerWidth >= 1024 ? 'desktop' : 'mobile';
+    } catch {
+      return 'desktop';
+    }
+  });
+
+  const handleToggleViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('neurocycle_view_mode', mode);
+    } catch (e) {}
+  };
+
+  const isDesktop = viewMode === 'desktop';
+
+  // Leaderboard & Achievement Modals
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
   const handleMarkAsRead = async (notificationId: string) => {
-    const updatedNotifications = userData.notifications.map(n =>
+    const updatedNotifications = (userData.notifications || []).map(n =>
       n.id === notificationId ? { ...n, isRead: true } : n
     );
     saveUserData({ ...userData, notifications: updatedNotifications });
+  };
+
+  const handleDeleteNotification = (notificationId: string) => {
+    const updatedNotifications = (userData.notifications || []).filter(n => n.id !== notificationId);
+    saveUserData({ ...userData, notifications: updatedNotifications });
+  };
+
+  const handleClearAllNotifications = () => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus semua riwayat notifikasi?')) {
+      saveUserData({ ...userData, notifications: [] });
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -6632,7 +7546,8 @@ const ReadingTimer = ({
           water: analysis.impactStats.waterSaved,
           energy: analysis.impactStats.energySaved,
         },
-        image: thumbnailBase64
+        image: thumbnailBase64 || compressedBase64,
+        photoUrl: thumbnailBase64 || compressedBase64
       };
 
       const existingRecordIdx = userData.history.findIndex(h => h.date === todayFormatted);
@@ -6825,10 +7740,53 @@ const ReadingTimer = ({
     );
   }
 
+  const isUserDesktopScreen = isDesktop &&
+    state !== 'login' &&
+    state !== 'welcome' &&
+    state !== 'admin_dashboard' &&
+    state !== 'super_admin_dashboard' &&
+    state !== 'institution_admin_dashboard' &&
+    state !== 'partner_dashboard';
+
   // Main UI Render
   return (
-    <div className={`min-h-screen pb-32 max-w-md mx-auto ${state === 'login' ? 'bg-stone-900' : 'bg-stone-50'}`}>
-      <AnimatePresence mode="wait">
+    <div
+      className={`min-h-screen transition-all duration-300 ${
+        state === 'login' ? 'bg-stone-900' : 'bg-[#F9FAF9]'
+      } ${
+        isDesktop
+          ? 'w-full flex'
+          : 'max-w-md mx-auto pb-32 shadow-2xl relative border-x border-stone-200/60'
+      }`}
+    >
+      {/* Global View Mode Switcher: hanya tampil sebagai floating pill di Mobile Mode atau halaman login/welcome */}
+      {(!isDesktop || state === 'login' || state === 'welcome') && (
+        <ViewModeSwitcher currentMode={viewMode} onToggle={handleToggleViewMode} />
+      )}
+
+      {/* Desktop Left Sidebar (Hanya tampil di Mode Desktop & Layar Pengguna) */}
+      {isUserDesktopScreen && (
+        <DesktopSidebar
+          activeState={state}
+          onNavigate={(nextState) => setState(nextState)}
+          onScan={() => setState('scan_options')}
+          onShowQR={() => setShowUserQR(true)}
+          onShowNotifications={() => setShowNotifications(true)}
+          onLogout={async () => {
+            if (window.confirm("Apakah anda yakin ingin keluar dari aplikasi?")) {
+              await handleLogout();
+            }
+          }}
+          userData={userData}
+          unreadCount={userData.notifications.filter(n => !n.isRead).length}
+          viewMode={viewMode}
+          onToggleViewMode={handleToggleViewMode}
+        />
+      )}
+
+      {/* Main Content Area */}
+      <div className={isUserDesktopScreen ? "flex-1 min-w-0 min-h-screen flex flex-col overflow-x-hidden" : "w-full"}>
+        <AnimatePresence mode="wait">
         {state === 'login' && (
           <LoginScreen
             onGoogleLogin={handleGoogleLogin}
@@ -6897,20 +7855,25 @@ const ReadingTimer = ({
               <p className="text-sm text-stone-500 mb-6">Pilih foto dari kamera atau galeri untuk menganalisis sampahmu.</p>
               <div className="grid gap-4">
                 <button
+                  type="button"
                   onClick={() => { setState('main'); setTimeout(() => fileInputRef.current?.click(), 100); }}
-                  className="w-full py-4 rounded-3xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 transition-all"
+                  className="w-full py-4 rounded-3xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
                 >
-                  📷 Ambil Foto Kamera
+                  <Camera size={19} />
+                  <span>Ambil Foto Kamera</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setState('main'); setTimeout(() => galleryInputRef.current?.click(), 100); }}
-                  className="w-full py-4 rounded-3xl bg-stone-900 text-white font-bold shadow-lg shadow-stone-300/30 hover:bg-stone-800 transition-all"
+                  className="w-full py-4 rounded-3xl bg-stone-900 text-white font-bold shadow-lg shadow-stone-300/30 hover:bg-stone-800 transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
                 >
-                  🖼️ Unggah dari Galeri
+                  <ImageIcon size={19} />
+                  <span>Unggah dari Galeri</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setState('main')}
-                  className="w-full py-3 rounded-3xl bg-stone-100 text-stone-700 font-semibold hover:bg-stone-200 transition-all"
+                  className="w-full py-3.5 rounded-3xl bg-stone-100 text-stone-700 font-semibold hover:bg-stone-200 transition-all cursor-pointer active:scale-95"
                 >
                   Batal
                 </button>
@@ -6953,135 +7916,214 @@ const ReadingTimer = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="p-6"
+            className={isDesktop ? "max-w-7xl mx-auto px-6 py-8 pb-32 w-full" : "p-6"}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8 relative">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 flex items-center justify-center shrink-0">
-                  <img src="/logo_NeuroCycle.png" alt="NeuroCycle" className="w-full h-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)]" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-display font-bold text-emerald-900 leading-tight">Halo!</h1>
-                  <p className="mt-2 text-sm font-sans font-semibold text-stone-700 leading-tight">{userData.email || user?.email || 'Email belum tersedia'}</p>
-                </div>
-              </div>
+            {/* Top Greeting & Header */}
+            {isDesktop ? (
+              <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 rounded-4xl p-8 mb-8 text-white relative overflow-hidden shadow-xl shadow-emerald-950/15">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-10 left-1/3 w-64 h-64 bg-teal-300/15 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowNotifications(true)}
-                  className="relative p-3 bg-white rounded-2xl border border-stone-100 shadow-sm active:scale-95 transition-transform"
-                >
-                  <Bell size={18} className="text-stone-400" />
-                  {userData.notifications.filter(n => !n.isRead).length > 0 && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm("Apakah anda yakin ingin keluar dari aplikasi?")) {
-                      handleLogout();
-                    }
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-2xl border border-red-100 shadow-sm active:scale-95 transition-transform"
-                >
-                  <div className="w-5 h-5 bg-red-100 rounded-lg flex items-center justify-center text-red-600">
-                    <LogOut size={12} />
-                  </div>
-                </button>
-                <button
-                  onClick={() => setState('about')}
-                  className="flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-stone-100 shadow-sm active:scale-95 transition-transform"
-                >
-                  <div className="w-5 h-5 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
-                    <Info size={12} />
-                  </div>
-                  <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest hidden sm:inline">Tentang</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Mascot & Streak Section */}
-            {/* Home Screen View */}
-            <div className="flex flex-col items-center gap-6 mb-8">
-              <Mascot
-                streak={userData.streak || 1}
-                name={userData.mascotName}
-                onRename={() => {
-                  setNewName(userData.mascotName || 'NeuroFlame');
-                  setIsRenaming(true);
-                }}
-              />
-
-              <div className="flex gap-4 w-full">
-                {/* TikTok-Style Streak Badge */}
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="flex-1 bg-linear-to-r from-orange-500 to-red-600 p-px rounded-2xl shadow-lg shadow-orange-200/40 cursor-pointer overflow-hidden"
-                >
-                  <div className="bg-white/95 backdrop-blur-sm rounded-[15px] px-4 py-3 flex items-center gap-3">
-                    <div className="relative">
-                      <Zap size={24} className="text-orange-500 fill-orange-500 animate-pulse" />
-                      <div className="absolute inset-0 bg-orange-400 blur-lg opacity-40 animate-pulse" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 px-3 py-1 rounded-full">
+                        🌿 Portal Pengguna
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-200">
+                        Level {userData.level || 'Pemilah'}
+                      </span>
                     </div>
-                    <div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black text-stone-800 leading-none">{userData.streak || 1}</span>
-                        <span className="text-[10px] font-bold text-stone-400 uppercase">HARI</span>
+                    <h2 className="text-3xl font-display font-black tracking-tight text-white">
+                      Selamat Datang Kembali, {userData.displayName || 'Pemilah'}!
+                    </h2>
+                    <p className="text-xs text-emerald-100/90 max-w-xl mt-1">
+                      Setiap sampah yang kamu pilah dan setorkan membawa dampak nyata bagi kelestarian lingkungan dan memberikan bonus NeuroPoints melimpah.
+                    </p>
+                  </div>
+
+                  {/* Dual Stat Cards: NeuroFlame & NeuroPoints */}
+                  <div className="flex items-center gap-3 shrink-0 flex-wrap lg:flex-nowrap">
+                    {/* NeuroFlame Streak Card */}
+                    <div
+                      onClick={() => setState('daily_missions')}
+                      className="flex items-center gap-3.5 bg-gradient-to-br from-orange-500/20 via-amber-500/15 to-transparent hover:from-orange-500/30 hover:via-amber-500/25 backdrop-blur-md border border-orange-300/30 hover:border-orange-300/50 rounded-3xl p-4 sm:p-5 cursor-pointer transition-all hover:scale-102 group shadow-lg"
+                      title="Klik untuk melihat Misi Harian & menjaga NeuroFlame tetap menyala!"
+                    >
+                      <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-orange-600 via-amber-500 to-yellow-400 text-white flex items-center justify-center shadow-md shadow-orange-950/20 group-hover:scale-105 transition-transform overflow-hidden">
+                        <Flame size={28} className="text-white drop-shadow-md animate-pulse" />
+                        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                      <p className="text-[9px] font-bold text-orange-600 uppercase tracking-widest leading-none mt-1">NeuroStreak</p>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-orange-300">
+                            NeuroFlame
+                          </span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-ping" />
+                        </div>
+                        <h3 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight flex items-baseline gap-1">
+                          {userData.streak || 1}
+                          <span className="text-xs sm:text-sm text-orange-200 font-bold">Hari</span>
+                        </h3>
+                        <span className="text-[10px] text-orange-200/90 font-semibold group-hover:underline flex items-center gap-1">
+                          {userData.mascotName || 'Api Menyala'} 🔥
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* NeuroPoints Showcase Card */}
+                    <div
+                      onClick={() => setState('redemption')}
+                      className="flex items-center gap-3.5 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/25 hover:border-white/40 rounded-3xl p-4 sm:p-5 cursor-pointer transition-all hover:scale-102 group shrink-0 shadow-lg"
+                      title="Klik untuk menukar NeuroPoints"
+                    >
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-300 text-amber-950 flex items-center justify-center shadow-md group-hover:rotate-6 transition-transform">
+                        <Coins size={28} className="text-amber-950" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-300">
+                          Saldo NeuroPoints
+                        </p>
+                        <h3 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">
+                          {(userData.points || 0).toLocaleString('id-ID')}
+                          <span className="text-xs sm:text-sm text-amber-300 ml-1 font-bold">NP</span>
+                        </h3>
+                        <span className="text-[10px] text-emerald-200 font-semibold group-hover:underline">
+                          Tukar Hadiah Menarik →
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </motion.div>
-
-                {/* Tukar Poin Button */}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => setState('redemption')}
-                  className="bg-emerald-600 p-4 rounded-2xl shadow-lg shadow-emerald-200 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all"
-                >
-                  <Coins size={24} className="text-white" />
-                  <span className="text-[10px] font-black text-emerald-100 uppercase tracking-widest">Tukar Poin</span>
-                </motion.button>
+                </div>
               </div>
+            ) : (
+              /* Mobile Header */
+              <div className="flex items-center justify-between mb-8 relative">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                    <img src="/logo_NeuroCycle.png" alt="NeuroCycle" className="w-full h-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)]" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-display font-bold text-emerald-900 leading-tight">Halo!</h1>
+                    <p className="mt-2 text-sm font-sans font-semibold text-stone-700 leading-tight">{userData.email || user?.email || 'Email belum tersedia'}</p>
+                  </div>
+                </div>
 
-              {/* Setor Sampah Button (Bank Sampah) */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowNotifications(true)}
+                    className="relative p-3 bg-white rounded-2xl border border-stone-100 shadow-sm active:scale-95 transition-transform"
+                  >
+                    <Bell size={18} className="text-stone-400" />
+                    {userData.notifications.filter(n => !n.isRead).length > 0 && (
+                      <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Apakah anda yakin ingin keluar dari aplikasi?")) {
+                        handleLogout();
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-2xl border border-red-100 shadow-sm active:scale-95 transition-transform"
+                  >
+                    <div className="w-5 h-5 bg-red-100 rounded-lg flex items-center justify-center text-red-600">
+                      <LogOut size={12} />
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setState('about')}
+                    className="flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-stone-100 shadow-sm active:scale-95 transition-transform"
+                  >
+                    <div className="w-5 h-5 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                      <Info size={12} />
+                    </div>
+                    <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest hidden sm:inline">Tentang</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Auto-Slide Information Banner (NeuroCycle Intro, Bank Sampah, & Reward Marketplace) */}
+            <HomeInfoBanner
+              onScan={() => setState('scan_options')}
+              onGoToDeposit={() => setState('waste_bank_list')}
+              onGoToRedemption={() => setState('redemption')}
+              onGoToEducation={() => setState('education_list')}
+              userPoints={userData.points || 0}
+              isDesktop={isDesktop}
+            />
+
+            {/* Quick Actions Row (3-Column Action Grid on Desktop, 1-Column on Mobile) */}
+            <div className={isDesktop ? "grid grid-cols-3 gap-4 mb-8" : "grid grid-cols-1 gap-3 mb-6"}>
+              {/* Card 1: Bank Sampah */}
+              <motion.div
+                whileHover={{ y: -3, scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setState('waste_bank_list')}
-                className="w-full bg-white p-6 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-6 group hover:border-emerald-500/30 transition-all"
+                className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer flex items-center gap-4 group"
               >
-                <div className="w-16 h-16 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-                  <Recycle size={32} />
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all shrink-0">
+                  <Recycle size={24} />
                 </div>
-                <div className="text-left flex-1">
-                  <h3 className="text-lg font-display font-bold text-stone-800">Bank Sampah</h3>
-                  <p className="text-xs text-stone-400">Setor sampah & kumpulkan NeuroPoints</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-display font-black text-sm text-stone-900 group-hover:text-emerald-700 transition-colors">
+                    Bank Sampah
+                  </h4>
+                  <p className="text-[11px] text-stone-500 font-medium truncate mt-0.5">
+                    Setor sampah & raih poin
+                  </p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                  <ChevronRight size={20} />
+                <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition-colors">
+                  <ChevronRight size={14} />
                 </div>
-              </motion.button>
+              </motion.div>
 
-              {/* Misi Harian Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
+              {/* Card 2: Misi Harian & Quiz */}
+              <motion.div
+                whileHover={{ y: -3, scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setState('daily_missions')}
-                className="w-full bg-white p-6 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-6 group hover:border-amber-500/30 transition-all"
+                className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs hover:border-amber-300 hover:shadow-md transition-all cursor-pointer flex items-center gap-4 group"
               >
-                <div className="w-16 h-16 bg-amber-50 rounded-3xl flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
-                  <Award size={32} />
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all shrink-0">
+                  <Award size={24} />
                 </div>
-                <div className="text-left flex-1">
-                  <h3 className="text-lg font-display font-bold text-stone-800">Misi Harian</h3>
-                  <p className="text-xs text-stone-400">Selesaikan misi & raih bonus NeuroPoints</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-display font-black text-sm text-stone-900 group-hover:text-amber-700 transition-colors">
+                    Misi & Quiz
+                  </h4>
+                  <p className="text-[11px] text-stone-500 font-medium truncate mt-0.5">
+                    Tantangan harian & bonus
+                  </p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                  <ChevronRight size={20} />
+                <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-amber-100 group-hover:text-amber-700 transition-colors">
+                  <ChevronRight size={14} />
                 </div>
-              </motion.button>
+              </motion.div>
+
+              {/* Card 3: Papan Peringkat Top 3 */}
+              <motion.div
+                whileHover={{ y: -3, scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setState('leaderboard')}
+                className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs hover:border-yellow-300 hover:shadow-md transition-all cursor-pointer flex items-center gap-4 group"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-yellow-50 text-yellow-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
+                  <Trophy size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-display font-black text-sm text-stone-900 group-hover:text-yellow-700 transition-colors">
+                    Peringkat Juara
+                  </h4>
+                  <p className="text-[11px] text-stone-500 font-medium truncate mt-0.5">
+                    Top 3 medali & reward
+                  </p>
+                </div>
+                <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-yellow-100 group-hover:text-yellow-700 transition-colors">
+                  <ChevronRight size={14} />
+                </div>
+              </motion.div>
             </div>
 
 
@@ -7230,16 +8272,27 @@ const ReadingTimer = ({
               </div>
               <div className="grid grid-cols-3 gap-2 mt-4 text-center">
                 <div className="p-3 bg-emerald-50 rounded-2xl">
-                  <p className="text-[10px] text-stone-400 uppercase font-bold mb-1">CO2 (g)</p>
-                  <p className="font-display font-bold text-emerald-700">{userData.history.reduce((a, b) => a + b.co2, 0)}</p>
+                  <p className="text-[10px] text-stone-400 uppercase font-bold mb-1">CO2 Reduksi</p>
+                  <p className="font-display font-bold text-emerald-700">
+                    {(() => {
+                      const total = userData.history.reduce((a, b) => a + b.co2, 0);
+                      return total >= 1000 
+                        ? `${(total / 1000).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} kg` 
+                        : `${Number(total.toFixed(1)).toLocaleString('id-ID')} g`;
+                    })()}
+                  </p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-2xl">
-                  <p className="text-[10px] text-stone-400 uppercase font-bold mb-1">Air (L)</p>
-                  <p className="font-display font-bold text-blue-700">{userData.history.reduce((a, b) => a + b.water, 0)}</p>
+                  <p className="text-[10px] text-stone-400 uppercase font-bold mb-1">Air Bersih</p>
+                  <p className="font-display font-bold text-blue-700">
+                    {Number(userData.history.reduce((a, b) => a + b.water, 0).toFixed(1)).toLocaleString('id-ID')} L
+                  </p>
                 </div>
                 <div className="p-3 bg-amber-50 rounded-2xl">
-                  <p className="text-[10px] text-stone-400 uppercase font-bold mb-1">Energi (kWh)</p>
-                  <p className="font-display font-bold text-amber-700">{userData.history.reduce((a, b) => a + b.energy, 0).toFixed(1)}</p>
+                  <p className="text-[10px] text-stone-400 uppercase font-bold mb-1">Energi Terkonservasi</p>
+                  <p className="font-display font-bold text-amber-700">
+                    {Number(userData.history.reduce((a, b) => a + b.energy, 0).toFixed(1)).toLocaleString('id-ID')} kWh
+                  </p>
                 </div>
               </div>
             </div>
@@ -7276,23 +8329,12 @@ const ReadingTimer = ({
               ))}
             </div>
 
-            {/* Credits Section */}
-            <div className="mt-12 mb-8 flex flex-col items-center">
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em] mb-3">
-                ingin menyayakan info lebih lanjut? hubungi admin :
-              </p>
-              <motion.a
-                href="https://www.instagram.com/neurocycle.id?igsh=YWw5MGdzNzFyZnV2"
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-linear-to-tr from-[#f09433] via-[#cc2366] to-[#bc1888] text-white shadow-lg shadow-pink-200/50 transition-shadow"
-              >
-                <Instagram size={16} />
-                <span className="text-xs font-black tracking-tight">neurocycle.id</span>
-              </motion.a>
-            </div>
+            {/* Modern App Footer */}
+            <AppFooter
+              onNavigate={(nextState) => setState(nextState)}
+              onScan={() => setState('scan_options')}
+              isDesktop={isDesktop}
+            />
 
           </motion.div>
         )}
@@ -7301,6 +8343,7 @@ const ReadingTimer = ({
 
         {state === 'education_list' && (
           <EducationList
+            isDesktop={isDesktop}
             onBack={() => {
               // Jika dari misi, kembali ke misi
               if (missionArticleContext) {
@@ -7323,29 +8366,27 @@ const ReadingTimer = ({
             exit={{ opacity: 0, x: -20 }}
             className="fixed inset-0 bg-stone-50 z-70 overflow-y-auto"
           >
-            <div className="p-6 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-stone-100">
-              <button
-                onClick={() => {
-                  if (missionArticleContext) {
+            <div className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-stone-100">
+              <div className="max-w-4xl mx-auto p-4 sm:p-6 flex items-center justify-between">
+                <button
+                  onClick={() => {
                     setState('education_list');
-                  } else {
-                    setState('education_list');
-                  }
-                }}
-                className="p-3 bg-stone-100 rounded-2xl text-stone-600 hover:bg-stone-200"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h2 className="text-lg font-display font-bold">Detail Edukasi</h2>
-              {/* Badge misi jika dari misi */}
-              {missionArticleContext ? (
-                <div className="px-3 py-1.5 bg-purple-100 rounded-xl">
-                  <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest">Misi Aktif</p>
-                </div>
-              ) : <div className="w-10" />}
+                  }}
+                  className="p-3 bg-stone-100 rounded-2xl text-stone-600 hover:bg-stone-200 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <h2 className="text-lg font-display font-bold text-stone-800">Detail Edukasi</h2>
+                {/* Badge misi jika dari misi */}
+                {missionArticleContext ? (
+                  <div className="px-3 py-1.5 bg-purple-100 rounded-xl">
+                    <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest">Misi Aktif</p>
+                  </div>
+                ) : <div className="w-10" />}
+              </div>
             </div>
 
-            <div className="p-6 pb-32">
+            <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-32">
               <div className="flex items-center gap-4 mb-8">
                 <div className="w-16 h-16 bg-white rounded-3xl shadow-sm flex items-center justify-center border border-stone-100">
                   {IconMap[selectedArticle.icon] && React.createElement(IconMap[selectedArticle.icon], { size: 32, className: `text-${selectedArticle.color}-500` })}
@@ -7455,169 +8496,206 @@ const ReadingTimer = ({
             }}
             onShowPartnerTx={() => setShowPartnerTx(true)}
             onShowUserDeposit={() => setShowUserDeposit(true)}
+            onOpenLeaderboard={() => setState('leaderboard')}
+            onOpenAchievements={() => setShowAchievementModal(true)}
+            isDesktop={isDesktop}
+          />
+        )}
+        {state === 'leaderboard' && (
+          <LeaderboardView
+            currentUser={userData}
+            onBack={() => setState('main')}
+            onOpenAchievements={() => setShowAchievementModal(true)}
+            onUpdateUserData={(updated) => saveUserData(updated)}
           />
         )}
         {state === 'result' && result && (
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="pb-20"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className={`w-full pb-20 ${isDesktop ? 'max-w-6xl mx-auto px-6 py-6' : 'max-w-md mx-auto px-4 pb-24'}`}
           >
-            {/* Action Bar */}
-            <div className="p-6 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-50">
+            {/* Header Bar */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-stone-200/70">
               <button
                 onClick={resetScanner}
-                className="p-3 bg-stone-100 rounded-2xl text-stone-600 hover:bg-stone-200"
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white rounded-2xl text-stone-700 hover:bg-stone-100 border border-stone-200 text-xs sm:text-sm font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={16} />
+                <span>Kembali</span>
               </button>
-              <h2 className="text-lg font-display font-bold">Analisis Sampah</h2>
-              <div className="w-10" />
+              <div className="text-center">
+                <span className="text-[10px] font-black tracking-wider uppercase text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  AI Computer Vision
+                </span>
+                <h2 className="text-base sm:text-xl font-display font-bold text-stone-900">Hasil Analisis Sampah</h2>
+              </div>
+              <div className="w-16 flex justify-end">
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200 flex items-center gap-1 shadow-xs">
+                  <Sparkles size={12} />
+                  {Math.round(result.accuracy * 100)}%
+                </span>
+              </div>
             </div>
 
-            <div className="px-6">
-              {/* Photo Display */}
-              <div className="relative rounded-[40px] overflow-hidden aspect-square shadow-2xl mb-8 border-4 border-white">
-                <img src={scannedImage!} alt="Scanned" className="w-full h-full object-cover" />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-emerald-600 flex items-center gap-2">
-                  <Sparkles size={12} />
-                  Confidence: {Math.round(result.accuracy * 100)}%
-                </div>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="absolute inset-8 border-2 border-white/50 border-dashed rounded-4xl bg-white/10 backdrop-blur-sm flex items-center justify-center px-4"
-                >
-                  <div className="text-white text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Terdeteksi</p>
-                    <p className="text-xl font-display font-bold">{result.name}</p>
+            {/* Layout Grid: 2 Kolom pada Desktop, 1 Kolom pada Mobile */}
+            <div className={`grid gap-6 ${isDesktop ? 'grid-cols-1 lg:grid-cols-12 items-start' : 'grid-cols-1'}`}>
+              
+              {/* Kolom Kiri: Visual Sampah, Kategori, Dampak, & Tombol Selesai */}
+              <div className={isDesktop ? 'lg:col-span-5 space-y-5 lg:sticky lg:top-6' : 'space-y-4'}>
+                {/* Photo Display dengan ukuran proporsional terkontrol */}
+                <div className="relative rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-stone-950 aspect-[4/3] sm:aspect-square max-h-[380px] w-full">
+                  <img src={scannedImage!} alt="Scanned" className="w-full h-full object-cover" />
+                  
+                  {/* Badge Confidence di pojok kanan atas foto */}
+                  <div className="absolute top-3 right-3 bg-stone-900/80 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                    <Sparkles size={12} className="text-emerald-400" />
+                    <span>Akurasi: {Math.round(result.accuracy * 100)}%</span>
                   </div>
-                </motion.div>
-              </div>
 
-              {/* Identity & Category */}
-              <div className="mb-8 text-center">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <span className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${result.category === 'Organik' ? 'bg-green-100 text-green-700' :
-                    result.category === 'Residu' ? 'bg-amber-100 text-amber-700' :
-                    result.category === 'Anorganik' ? 'bg-blue-100 text-blue-700' :
+                  {/* Glassmorphic Caption Terdeteksi di bagian bawah foto */}
+                  <div className="absolute inset-x-3 bottom-3 bg-stone-950/85 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-white">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-0.5">Objek Terdeteksi</p>
+                    <p className="text-base sm:text-lg font-display font-bold text-white leading-tight drop-shadow-sm">{result.name}</p>
+                  </div>
+                </div>
+
+                {/* Identity & Badges */}
+                <div className="bg-white rounded-2xl p-4 border border-stone-200/80 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-stone-500">Kategori:</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      result.category === 'Organik' ? 'bg-green-100 text-green-700' :
+                      result.category === 'Residu' ? 'bg-amber-100 text-amber-700' :
+                      result.category === 'Anorganik' ? 'bg-blue-100 text-blue-700' :
                       result.category === 'B3' ? 'bg-red-100 text-red-700' :
-                        result.category === 'Kaca' ? 'bg-cyan-100 text-cyan-700' :
-                        result.category === 'Plastik' ? 'bg-purple-100 text-purple-700' :
-                        result.category === 'Kertas' ? 'bg-amber-50 text-amber-900' :
-                        result.category === 'Logam' ? 'bg-gray-200 text-gray-800' :
-                        'bg-stone-100 text-stone-700'
+                      result.category === 'Kaca' ? 'bg-cyan-100 text-cyan-700' :
+                      result.category === 'Plastik' ? 'bg-purple-100 text-purple-700' :
+                      result.category === 'Kertas' ? 'bg-amber-50 text-amber-900' :
+                      result.category === 'Logam' ? 'bg-gray-200 text-gray-800' :
+                      'bg-stone-100 text-stone-700'
                     }`}>
-                    {result.category}
-                  </span>
+                      {result.category}
+                    </span>
+                  </div>
                   {result.recyclable && (
-                    <span className="bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1">
-                      <Recycle size={12} /> Daur Ulang
+                    <span className="bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs">
+                      <Recycle size={12} /> Bisa Didaur Ulang
                     </span>
                   )}
                 </div>
-              </div>
 
-              {/* Composition */}
-              <div className="bg-white rounded-[40px] p-8 shadow-sm border border-stone-100 mb-6">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-stone-400 mb-6 flex items-center gap-2">
-                  Komposisi Detail
-                </h3>
-                <div className="space-y-6">
-                  {result.composition.map((item, idx) => (
-                    <div key={idx}>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-bold text-stone-800 text-sm">{item.material}</span>
-                        <span className="text-emerald-600 font-display font-bold">{item.percentage}%</span>
-                      </div>
-                      <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${item.percentage}%` }}
-                          transition={{ delay: 0.5 + idx * 0.1, duration: 1 }}
-                          className="h-full bg-emerald-500"
-                        />
-                      </div>
+                {/* Estimasi Dampak Positif */}
+                <div className="p-4 bg-emerald-50/90 rounded-2xl border border-emerald-200/80">
+                  <p className="text-[11px] font-black text-emerald-800 uppercase tracking-wider mb-3">Estimasi Dampak Positif Lingkungan</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-white/80 rounded-xl p-2.5 border border-emerald-100">
+                      <p className="text-base sm:text-lg font-display font-bold text-emerald-700">-{result.impactStats.co2Saved}g</p>
+                      <p className="text-[10px] text-stone-500 font-medium">Emisi CO2</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Creative Ideas */}
-              <div className="bg-amber-50 rounded-[40px] p-8 mb-6 border border-amber-100">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-amber-800 mb-6 flex items-center gap-2">
-                  <Lightbulb size={18} /> Ide Kreasi (Upcycle)
-                </h3>
-                <div className="space-y-4">
-                  {result.creativeIdeas.map((idea, idx) => (
-                    <div key={idx} className="flex gap-4">
-                      <div className="w-8 h-8 bg-amber-200 rounded-xl flex items-center justify-center text-amber-800 font-bold shrink-0 text-sm">
-                        {idx + 1}
-                      </div>
-                      <p className="text-amber-900/80 text-sm italic py-1 leading-relaxed">
-                        "{idea}"
-                      </p>
+                    <div className="bg-white/80 rounded-xl p-2.5 border border-emerald-100">
+                      <p className="text-base sm:text-lg font-display font-bold text-blue-700">{result.impactStats.waterSaved}L</p>
+                      <p className="text-[10px] text-stone-500 font-medium">Air Hemat</p>
                     </div>
-                  ))}
+                    <div className="bg-white/80 rounded-xl p-2.5 border border-emerald-100">
+                      <p className="text-base sm:text-lg font-display font-bold text-amber-700">{result.impactStats.energySaved}kW</p>
+                      <p className="text-[10px] text-stone-500 font-medium">Energi Hemat</p>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Action Selesai Button */}
+                <button
+                  onClick={resetScanner}
+                  className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl font-bold text-base shadow-lg shadow-emerald-700/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <CheckCircle size={18} />
+                  <span>Selesai & Dapatkan +25 NP</span>
+                </button>
               </div>
 
-              {/* Disposal & Impact */}
-              <div className="bg-emerald-50 rounded-[40px] p-8 mb-6 border border-emerald-100">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-800 mb-6 flex items-center gap-2">
-                  <BookOpen size={18} /> Instruksi Pembuangan
-                </h3>
-                <p className="text-emerald-900 text-sm leading-relaxed mb-6">
-                  {result.disposalGuide}
-                </p>
+              {/* Kolom Kanan: Detail Analisis, Ide Kreasi, & Panduan Pembuangan */}
+              <div className={isDesktop ? 'lg:col-span-7 space-y-5' : 'space-y-4'}>
+                {/* Komposisi Detail */}
+                <div className="bg-white rounded-3xl p-6 shadow-xs border border-stone-200/80">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 flex items-center gap-2">
+                      <Layers size={15} className="text-emerald-600" />
+                      Komposisi Detail Material
+                    </h3>
+                    <span className="text-[10px] font-bold text-stone-400">Total 100%</span>
+                  </div>
+                  <div className="space-y-4">
+                    {result.composition.map((item, idx) => (
+                      <div key={idx}>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="font-bold text-stone-800 text-sm">{item.material}</span>
+                          <span className="text-emerald-700 font-display font-bold text-sm">{item.percentage}%</span>
+                        </div>
+                        <div className="h-2.5 bg-stone-100 rounded-full overflow-hidden p-0.5">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${item.percentage}%` }}
+                            transition={{ delay: 0.2 + idx * 0.1, duration: 0.8 }}
+                            className="h-full bg-emerald-500 rounded-full"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-                <div className="p-6 bg-white rounded-3xl border border-emerald-100 mb-6">
-                  <h4 className="text-xs font-black text-stone-400 uppercase tracking-widest mb-4">Langkah Selanjutnya</h4>
-                  <div className="flex gap-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+                {/* Ide Kreasi (Upcycle) */}
+                <div className="bg-amber-50/70 rounded-3xl p-6 border border-amber-200/80">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-amber-900 mb-4 flex items-center gap-2">
+                    <Lightbulb size={16} className="text-amber-600" />
+                    Ide Kreasi & Nilai Tambah (Upcycle)
+                  </h3>
+                  <div className="space-y-3">
+                    {result.creativeIdeas.map((idea, idx) => (
+                      <div key={idx} className="flex gap-3 bg-white/70 rounded-2xl p-3.5 border border-amber-100/80">
+                        <div className="w-6 h-6 bg-amber-500 text-white rounded-lg flex items-center justify-center font-bold shrink-0 text-xs">
+                          {idx + 1}
+                        </div>
+                        <p className="text-stone-800 text-xs sm:text-sm font-medium leading-relaxed">
+                          {idea}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Instruksi Pembuangan & Setor ke Mitra Bank Sampah */}
+                <div className="bg-emerald-50/60 rounded-3xl p-6 border border-emerald-200/80">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-emerald-900 mb-3 flex items-center gap-2">
+                    <BookOpen size={16} className="text-emerald-600" />
+                    Instruksi Pembuangan yang Tepat
+                  </h3>
+                  <p className="text-stone-700 text-xs sm:text-sm leading-relaxed mb-5 bg-white/70 p-3.5 rounded-2xl border border-emerald-100">
+                    {result.disposalGuide}
+                  </p>
+
+                  <div className="p-4 bg-white rounded-2xl border border-emerald-200/90 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center shrink-0">
                       <MapPin size={20} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[11px] text-stone-600 leading-normal">
-                        Kirim sampah ini ke <b>TPU/TPA terdekat</b> melalui NeuroMap untuk mendapatkan <b>BONUS NeuroPoints (+50 NP)</b> dan bantu kelola lingkungan lebih baik!
+                      <p className="text-xs text-stone-700 font-medium leading-snug">
+                        Setorkan sampah ini ke <b>Bank Sampah Mitra NeuroCycle</b> melalui NeuroMap untuk mendapatkan <b>BONUS ekstra (+50 NP)</b>!
                       </p>
-                      <button
-                        onClick={() => setState('map')}
-                        className="mt-3 text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1"
-                      >
-                        Cari Lokasi <ChevronRight size={12} />
-                      </button>
                     </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-white/50 rounded-3xl border border-emerald-100">
-                  <p className="text-xs font-bold text-emerald-700 uppercase mb-3">Estimasi Dampak Positif:</p>
-                  <div className="flex justify-between">
-                    <div className="text-center">
-                      <p className="text-lg font-display font-bold text-emerald-600">-{result.impactStats.co2Saved}g</p>
-                      <p className="text-[10px] text-stone-400">CO2 Emissions</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-display font-bold text-blue-600">{result.impactStats.waterSaved}L</p>
-                      <p className="text-[10px] text-stone-400">Air Terselamatkan</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-display font-bold text-amber-600">{result.impactStats.energySaved}kW</p>
-                      <p className="text-[10px] text-stone-400">Energi Hemat</p>
-                    </div>
+                    <button
+                      onClick={() => setState('map')}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                    >
+                      <MapPin size={13} />
+                      <span>Cari Lokasi</span>
+                      <ChevronRight size={13} />
+                    </button>
                   </div>
                 </div>
               </div>
-
-              {/* Action */}
-              <button
-                onClick={resetScanner}
-                className="w-full py-5 bg-stone-900 text-white rounded-4xl font-bold text-lg shadow-xl shadow-black/10 active:scale-95 transition-all mb-12"
-              >
-                Selesai (+25 Points)
-              </button>
             </div>
           </motion.div>
         )}
@@ -7706,6 +8784,7 @@ const ReadingTimer = ({
               galleryInputRef.current?.click();
             }}
             onPointsUpdated={(newPoints) => saveUserData({ ...userData, points: newPoints })}
+            isDesktop={isDesktop}
           />
         )}
 
@@ -7737,7 +8816,8 @@ const ReadingTimer = ({
         onChange={handleImageInput}
       />
 
-      {(state !== 'login' && 
+      {/* BottomNav hanya aktif di mobile mode dan halaman yang sesuai */}
+      {!isDesktop && (state !== 'login' && 
         state !== 'welcome' && 
         state !== 'admin_dashboard' && 
         state !== 'super_admin_dashboard' && 
@@ -7750,6 +8830,7 @@ const ReadingTimer = ({
         state !== 'waste_bank_verify' && 
         state !== 'daily_missions' && 
         state !== 'quiz' && 
+        state !== 'leaderboard' &&
         !showPartnerDashboard && 
         !showPartnerOnboard && 
         !showPartnerTx && 
@@ -7761,6 +8842,7 @@ const ReadingTimer = ({
           onScan={() => setState('scan_options')}
         />
       )}
+      </div> {/* Penutup Main Content Area dari line 6920 */}
 
       <AnimatePresence>
         {isRenaming && (
@@ -7920,9 +9002,11 @@ const ReadingTimer = ({
       <AnimatePresence>
         {showNotifications && (
           <NotificationModal
-            notifications={userData.notifications}
+            notifications={deduplicateNotifications(userData.notifications || [])}
             onClose={() => setShowNotifications(false)}
             onMarkAsRead={handleMarkAsRead}
+            onDeleteNotification={handleDeleteNotification}
+            onClearAllNotifications={handleClearAllNotifications}
           />
         )}
       </AnimatePresence>
@@ -7991,6 +9075,18 @@ const ReadingTimer = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Leaderboard Achievement Showcase Modal */}
+      <AchievementModal
+        isOpen={showAchievementModal}
+        onClose={() => setShowAchievementModal(false)}
+        userBadges={userData.badges || []}
+        userName={userData.displayName || 'Pemilah'}
+        onOpenLeaderboard={() => {
+          setShowAchievementModal(false);
+          setState('leaderboard');
+        }}
+      />
 
       {/* NeuroBot Chatbot */}
       {state !== 'login' && 

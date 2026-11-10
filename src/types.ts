@@ -100,6 +100,7 @@ export interface ScanHistoryItem {
   date: string;
   impact: { co2: number; water: number; energy: number };
   image?: string;
+  photoUrl?: string;
 }
 
 export interface DepositHistoryItem {
@@ -127,10 +128,31 @@ export interface ClaimHistoryItem {
   userUid?: string;
 }
 
+export interface UserBadge {
+  id: string;
+  category: 'scanner' | 'collector' | 'quiz';
+  rank: 1 | 2 | 3;
+  title: string;
+  description: string;
+  awardedAt: string;
+  awardedTimestamp?: number;
+  pointsReward: number;
+}
+
+export interface LeaderboardRewardConfig {
+  scanner: { rank1: number; rank2: number; rank3: number };
+  collector: { rank1: number; rank2: number; rank3: number };
+  quiz: { rank1: number; rank2: number; rank3: number };
+}
+
 export interface UserData {
   uid?: string;
   email: string;
   displayName: string;
+  username?: string;
+  photoURL?: string;
+  avatarUrl?: string;
+  avatarFrame?: string;
   role?: string;
   institutionId?: string;
   institutionCode?: string;
@@ -147,4 +169,6 @@ export interface UserData {
   claimHistory: ClaimHistoryItem[];
   depositHistory: DepositHistoryItem[];
   notifications: NotificationItem[];
+  badges?: UserBadge[];
+  claimedLeaderboardRewards?: string[];
 }

@@ -384,31 +384,31 @@ const MissionCard = ({
 
   return (
     <motion.div layout
-      className={`bg-white p-6 rounded-4xl border shadow-sm transition-all ${
-        completed && !claimed ? 'border-emerald-300 shadow-emerald-100' :
-        claimed ? 'border-stone-100 opacity-70' : 'border-stone-100'
+      className={`bg-white p-5 sm:p-6 rounded-3xl sm:rounded-4xl border shadow-xs transition-all ${
+        completed && !claimed ? 'border-emerald-300 shadow-emerald-100/50' :
+        claimed ? 'border-stone-100 opacity-70' : 'border-stone-200/70'
       }`}
     >
-      <div className="flex items-start gap-4 mb-4">
+      <div className="flex items-start gap-3.5 sm:gap-4 mb-4">
         <MissionIcon type={mission.type} />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-stone-800 text-sm">{mission.title}</h3>
-            {claimed && <span className="text-[8px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">Selesai</span>}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h3 className="font-bold text-stone-900 text-sm sm:text-base leading-snug">{mission.title}</h3>
+            {claimed && <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-widest shrink-0">Selesai</span>}
           </div>
-          <p className="text-[10px] text-stone-400 leading-relaxed">{mission.description}</p>
+          <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">{mission.description}</p>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-xs font-black text-emerald-600">+{mission.rewardPoints.toLocaleString()}</p>
-          <p className="text-[8px] text-stone-400 font-bold">NP</p>
+        <div className="text-right shrink-0 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-100">
+          <p className="text-xs sm:text-sm font-black text-emerald-700">+{mission.rewardPoints.toLocaleString()}</p>
+          <p className="text-[8px] text-emerald-600 font-bold uppercase tracking-wider">NP</p>
         </div>
       </div>
 
       <div className="mb-4">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="text-[10px] font-bold text-stone-500">{current}/{mission.target}</span>
-          <span className={`text-[10px] font-bold flex items-center gap-1 ${expired ? 'text-red-400' : 'text-stone-400'}`}>
-            <Clock size={10} />
+          <span className="text-[10px] font-bold text-stone-500">Progress: {current}/{mission.target}</span>
+          <span className={`text-[10px] font-bold flex items-center gap-1 ${expired ? 'text-rose-500' : 'text-stone-400'}`}>
+            <Clock size={11} />
             {expired ? 'Berakhir' : `${h}j ${m}m ${s}d`}
           </span>
         </div>
@@ -438,6 +438,7 @@ interface DailyMissionsProps {
   scanCountToday: number;
   hasLoggedInToday: boolean;
   depositApprovedToday: boolean;
+  isDesktop?: boolean;
   onBack: () => void;
   onGoToArticles: (mission: Mission, progress: MissionProgress) => void;
   onGoToDeposit: () => void;
@@ -450,6 +451,7 @@ interface DailyMissionsProps {
 export const DailyMissions: React.FC<DailyMissionsProps> = ({
   userId, userEmail, displayName, userPoints,
   scanCountToday, hasLoggedInToday, depositApprovedToday,
+  isDesktop = false,
   onBack, onGoToArticles, onGoToDeposit, onGoToQuiz, onPointsUpdated,
   onScanCamera, onScanGallery,
 }) => {
@@ -536,25 +538,25 @@ export const DailyMissions: React.FC<DailyMissionsProps> = ({
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-      className="p-6 pb-40">
-      <header className="flex items-center justify-between mb-8">
+      className={`mx-auto ${isDesktop ? 'p-6 sm:p-8 max-w-5xl pb-40' : 'p-4 pb-36 max-w-md w-full'}`}>
+      <header className="flex items-center justify-between mb-6 sm:mb-8">
         <div>
-          <h2 className="text-2xl font-display font-black text-stone-900">Misi Harian</h2>
-          <p className="text-xs text-stone-400 font-medium mt-1">Selesaikan misi untuk dapatkan NeuroPoints ekstra</p>
+          <h2 className="text-xl sm:text-2xl font-display font-black text-stone-900">Misi Harian</h2>
+          <p className="text-xs text-stone-500 font-medium mt-0.5">Selesaikan misi untuk dapatkan NeuroPoints ekstra</p>
         </div>
-        <button onClick={onBack} className="p-3 bg-white rounded-2xl shadow-sm border border-stone-100 active:scale-95 transition-transform">
-          <ArrowLeft size={20} className="text-stone-600" />
+        <button onClick={onBack} className="p-2.5 sm:p-3 bg-white rounded-2xl shadow-xs border border-stone-200/80 active:scale-95 transition-transform cursor-pointer">
+          <ArrowLeft size={18} className="text-stone-600" />
         </button>
       </header>
 
       {missions.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-[40px] border border-dashed border-stone-200">
-          <div className="text-5xl mb-4">🎯</div>
-          <p className="font-bold text-stone-600 mb-1">Belum Ada Misi Hari Ini</p>
+        <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-stone-200 p-6">
+          <div className="text-4xl mb-3">🎯</div>
+          <p className="font-bold text-stone-700 mb-1">Belum Ada Misi Hari Ini</p>
           <p className="text-xs text-stone-400">Admin belum menjadwalkan misi. Cek lagi nanti!</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className={isDesktop ? "grid grid-cols-1 md:grid-cols-2 gap-5" : "flex flex-col gap-4"}>
           {missions.map((mission) => (
             <MissionCard
               key={mission.id}
@@ -616,8 +618,8 @@ export const DailyMissions: React.FC<DailyMissionsProps> = ({
                 <p className="text-xs text-emerald-500 font-bold mt-1">sudah masuk ke akunmu</p>
               </div>
               <button onClick={() => setClaimModal(null)}
-                className="w-full py-4 bg-stone-900 text-white rounded-2xl font-bold active:scale-95 transition-all">
-                Mantap! 🚀
+                className="w-full py-4 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl font-bold active:scale-95 transition-all cursor-pointer">
+                Selesai
               </button>
             </motion.div>
           </motion.div>

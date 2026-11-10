@@ -255,6 +255,39 @@ const PartnerTransactionSubmit = ({ partnerUid, onClose, onDone }: { partnerUid?
         });
       }
 
+      // Kirimkan notifikasi ke user yang setor
+      if (resolvedUser?.uid) {
+        try {
+          const userDocRef = doc(db, 'users', resolvedUser.uid);
+          const userSnap = await getDoc(userDocRef);
+          if (userSnap.exists()) {
+            const currentUData = userSnap.data();
+            const existingNotifs = currentUData.notifications || [];
+            const notifTitle = isUnapproved
+              ? 'Setoran Menunggu Review Admin ⏳'
+              : 'Setoran Tercatat di Bank Sampah ⏳';
+            const notifMsg = isUnapproved
+              ? `Setoran sampah Anda sebesar ${finalTotalWeight} kg di ${partnerName || 'Bank Sampah'} sedang ditinjau oleh Admin.`
+              : `Setoran sampah Anda sebesar ${finalTotalWeight} kg (+${finalTotalPoints.toLocaleString()} NP) telah dicatat oleh ${partnerName || 'Bank Sampah'}. Menunggu konfirmasi akhir.`;
+            
+            const newTxNotif = {
+              id: 'notif_' + Math.random().toString(36).substr(2, 9),
+              title: notifTitle,
+              message: notifMsg,
+              date: new Date().toLocaleString('id-ID'),
+              type: 'warning' as const,
+              isRead: false,
+              depositId: txId
+            };
+            await updateDoc(userDocRef, {
+              notifications: [newTxNotif, ...existingNotifs]
+            });
+          }
+        } catch (notifErr) {
+          console.warn('Gagal menambahkan notifikasi ke user:', notifErr);
+        }
+      }
+
       setSuccessInfo({
         title: isUnapproved ? 'Menunggu Review Admin' : 'Setoran Dicatat',
         message: isUnapproved
