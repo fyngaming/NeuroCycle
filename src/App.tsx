@@ -900,11 +900,6 @@ const UserDashboard = ({
             createdAt: b.awardedTimestamp ? new Date(b.awardedTimestamp).toISOString() : new Date().toISOString()
           };
           syntheticLbTxs.push(rewardTx);
-
-          // Simpan ke Firestore agar riwayat tersimpan permanen
-          if (userData.uid) {
-            addDoc(collection(db, 'transactions'), rewardTx).catch(() => {});
-          }
         }
       });
 
@@ -4165,8 +4160,12 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const allActivities = allActivitiesRaw
     .filter(item => {
       const isLb = item.type === 'Hadiah Juara' || Boolean((item as any).isLeaderboardBadge);
+      const lbCat = (item as any).category || (item as any).categoryKey || 
+        (item.extra?.toLowerCase().includes('kuis') || item.extra?.toLowerCase().includes('quiz') ? 'quiz' : 
+         item.extra?.toLowerCase().includes('kolektor') || item.extra?.toLowerCase().includes('pengumpul') ? 'collector' : 
+         item.extra?.toLowerCase().includes('scanner') || item.extra?.toLowerCase().includes('ai') ? 'scanner' : (item.extra || item.title));
       const dedupeKey = isLb
-        ? `lb_${item.userEmail}_${item.title}_${formatActivityDate(item.date).date}`
+        ? `lb_${item.userEmail || (item as any).userUid || 'user'}_${lbCat}`
         : (item.id || `act_${Math.random()}`);
       if (!dedupeKey || seenActivityKeys.has(dedupeKey)) return false;
       seenActivityKeys.add(dedupeKey);

@@ -225,9 +225,25 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     return filteredTransactions.slice(start, start + txPerPage);
   }, [filteredTransactions, txPage, txPerPage]);
 
-  // 2. Tab Klaim Hadiah: Khusus riwayat klaim hadiah juara leaderboard
+  // 2. Tab Klaim Hadiah: Khusus riwayat klaim hadiah juara leaderboard (1 klaim per kategori per pengguna)
   const leaderboardClaims = useMemo(() => {
-    return transactions.filter(tx => isLeaderboardReward(tx));
+    const rawLbTxs = transactions
+      .filter(tx => isLeaderboardReward(tx))
+      .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    // Deduplikasi ketat: 1 pengguna hanya boleh memiliki 1 klaim aktif per kategori leaderboard
+    const claimMap = new Map<string, any>();
+    for (const tx of rawLbTxs) {
+      const userKey = tx.userUid || tx.userEmail || tx.userToken || 'unknown_user';
+      const catKey = tx.category || 
+        (tx.partnerName?.toLowerCase().includes('kuis') || tx.categoryLabel?.toLowerCase().includes('kuis') ? 'quiz' :
+         tx.partnerName?.toLowerCase().includes('pengumpul') || tx.categoryLabel?.toLowerCase().includes('sampah') ? 'collector' : 'scanner');
+      const compositeKey = `${userKey}_${catKey}`;
+      if (!claimMap.has(compositeKey)) {
+        claimMap.set(compositeKey, tx);
+      }
+    }
+    return Array.from(claimMap.values());
   }, [transactions]);
 
   const filteredLeaderboardClaims = useMemo(() => {

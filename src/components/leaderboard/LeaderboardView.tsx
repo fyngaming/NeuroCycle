@@ -381,11 +381,14 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           claimedLeaderboardRewards: updatedClaimed
         }, { merge: true });
 
-        // Catat mutasi poin ke koleksi Firestore transactions agar terdata riwayat penambahannya
-        await addDoc(collection(db, 'transactions'), {
+        // Catat mutasi poin ke koleksi Firestore transactions dengan ID deterministik (1 klaim per kategori per pengguna)
+        const txDocId = `lb_reward_${currentUser.uid}_${badge.category}`;
+        await setDoc(doc(db, 'transactions', txDocId), {
+          id: txDocId,
           userUid: currentUser.uid,
           userEmail: currentUser.email || '',
           type: 'leaderboard_reward',
+          rank: badge.rank,
           partnerName: `Hadiah Juara #${badge.rank} Leaderboard`,
           category: badge.category,
           categoryLabel: categoryLabels[badge.category] || 'Papan Peringkat',
@@ -396,7 +399,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           status: 'approved',
           photoUrl: 'leaderboard_reward_badge',
           createdAt: new Date().toISOString()
-        });
+        }, { merge: true });
       } catch (e) {
         console.error('Failed to save claimed reward or transaction:', e);
       }
