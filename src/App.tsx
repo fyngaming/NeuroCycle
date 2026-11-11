@@ -855,6 +855,40 @@ const UserDashboard = ({
     return catMap.size;
   }, [userData.badges]);
 
+  // Sinkronisasi riwayat klaim hadiah profil
+  const displayClaimHistory = useMemo(() => {
+    const rawClaims = [...(userData.claimHistory || [])];
+    const categoryLabels: Record<string, string> = {
+      scanner: 'Scanner Sampah AI',
+      collector: 'Pengumpul Sampah',
+      quiz: 'Si Paling Kuis'
+    };
+
+    // Pastikan setiap medali leaderboard yang dimiliki user masuk ke riwayat klaim hadiah
+    (userData.badges || []).forEach((b: any) => {
+      const catLabel = categoryLabels[b.category] || b.category;
+      const expectedTitle = `Hadiah Juara #${b.rank} (${catLabel})`;
+      const hasClaim = rawClaims.some(c =>
+        (c.title && c.title.toLowerCase().includes(catLabel.toLowerCase())) ||
+        (c.id && c.id.includes(b.category))
+      );
+
+      if (!hasClaim) {
+        rawClaims.unshift({
+          id: `lb_claim_${b.category}_${b.rank}`,
+          title: expectedTitle,
+          points: b.pointsReward || (b.rank === 1 ? 1000 : b.rank === 2 ? 500 : 250),
+          date: b.awardedAt || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+          status: 'Success' as const,
+          userEmail: userData.email,
+          userUid: userData.uid
+        });
+      }
+    });
+
+    return rawClaims;
+  }, [userData.claimHistory, userData.badges, userData.email, userData.uid]);
+
   useEffect(() => {
     if (!userData.uid) return;
     const q = query(collection(db, 'transactions'), where('userUid', '==', userData.uid));
@@ -1223,7 +1257,7 @@ const UserDashboard = ({
           >
             <h3 className="font-display font-bold text-stone-800 px-1">Riwayat Hadiah</h3>
             <div className="space-y-4">
-              {(!userData.claimHistory || userData.claimHistory.length === 0) ? (
+              {(!displayClaimHistory || displayClaimHistory.length === 0) ? (
                 <div className="text-center py-16 bg-white rounded-[40px] border border-dashed border-stone-200">
                   <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-400">
                     <Award size={32} />
@@ -1231,40 +1265,66 @@ const UserDashboard = ({
                   <p className="text-stone-400 text-sm font-medium">Belum ada hadiah diklaim.</p>
                 </div>
               ) : (
-                userData.claimHistory.map((claim) => (
-                  <div
-                    key={claim.id}
-                    className="bg-white p-5 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4"
-                  >
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                      claim.status === 'Success' ? 'bg-emerald-50 text-emerald-500' :
-                      claim.status === 'Rejected' ? 'bg-red-50 text-red-400' :
-                      'bg-amber-50 text-amber-500'
-                    }`}>
-                      <Sparkles size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-stone-800 text-sm">{claim.title}</h4>
-                      <p className="text-[9px] text-stone-500 font-medium mt-0.5">{claim.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-xs font-bold ${
-                        claim.status === 'Success' ? 'text-stone-400 line-through' :
-                        claim.status === 'Rejected' ? 'text-red-400 line-through' :
-                        'text-amber-600'
+                displayClaimHistory.map((claim) => {
+                  const isLeaderboardReward = Boolean(
+                    claim.title?.toLowerCase().includes('hadiah juara') ||
+                    claim.id?.startsWith('lb_claim')
+                  );
+
+                  return (
+                    <div
+                      key={claim.id}
+                      className="bg-white p-5 rounded-4xl border border-stone-100 shadow-sm flex items-center gap-4 hover:border-stone-200 transition-all"
+                    >
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                        isLeaderboardReward
+                          ? 'bg-amber-100/90 text-amber-600 ring-2 ring-amber-300/50'
+                          : claim.status === 'Success' ? 'bg-emerald-50 text-emerald-500' :
+                            claim.status === 'Rejected' ? 'bg-red-50 text-red-400' :
+                            'bg-amber-50 text-amber-500'
                       }`}>
-                        {claim.status === 'Pending' ? '-' : ''}{claim.points.toLocaleString()} NP
-                      </p>
-                      <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full mt-1 inline-block ${
-                        claim.status === 'Success' ? 'bg-emerald-50 text-emerald-600' :
-                        claim.status === 'Rejected' ? 'bg-red-50 text-red-500' :
-                        'bg-amber-50 text-amber-600'
-                      }`}>
-                        {claim.status === 'Success' ? 'Diterima' : claim.status === 'Rejected' ? 'Ditolak' : 'Menunggu'}
-                      </span>
+                        {isLeaderboardReward ? (
+                          <Trophy size={22} className="text-amber-600" />
+                        ) : (
+                          <Sparkles size={24} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-stone-800 text-sm truncate">{claim.title}</h4>
+                          {isLeaderboardReward && (
+                            <span className="text-[9px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                              Top 3
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[9px] text-stone-500 font-medium mt-0.5">{claim.date}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {isLeaderboardReward ? (
+                          <p className="text-sm font-black text-emerald-600">
+                            +{claim.points.toLocaleString()} NP
+                          </p>
+                        ) : (
+                          <p className={`text-xs font-bold ${
+                            claim.status === 'Success' ? 'text-stone-400 line-through' :
+                            claim.status === 'Rejected' ? 'text-red-400 line-through' :
+                            'text-amber-600'
+                          }`}>
+                            {claim.status === 'Pending' ? '-' : ''}{claim.points.toLocaleString()} NP
+                          </p>
+                        )}
+                        <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full mt-1 inline-block ${
+                          claim.status === 'Success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                          claim.status === 'Rejected' ? 'bg-red-50 text-red-500 border border-red-200' :
+                          'bg-amber-50 text-amber-600 border border-amber-200'
+                        }`}>
+                          {claim.status === 'Success' ? 'Diterima' : claim.status === 'Rejected' ? 'Ditolak' : 'Menunggu'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </motion.div>

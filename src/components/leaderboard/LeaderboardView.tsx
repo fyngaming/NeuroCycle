@@ -283,8 +283,18 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   const isTop3 = currentUserRank !== null && currentUserRank <= 3;
   const myBadgesCount = (currentUser.badges || []).length;
 
+  // Single-Claim Enforcement: Cek apakah pengguna sudah pernah mengklaim hadiah di kategori ini (hanya boleh 1x klaim per kategori)
+  const isCategoryAlreadyClaimed = useMemo(() => {
+    const claimedList = currentUser.claimedLeaderboardRewards || [];
+    const hasClaimKey = claimedList.some(k => k === activeCategory || k.startsWith(`${activeCategory}_`));
+    const hasActiveBadge = (currentUser.badges || []).some(b => b.category === activeCategory);
+    return hasClaimKey || hasActiveBadge;
+  }, [currentUser.claimedLeaderboardRewards, currentUser.badges, activeCategory]);
+
   // Helper untuk membuka dialog klaim hadiah juara
   const triggerClaim = (rank: BadgeRank) => {
+    if (isCategoryAlreadyClaimed) return;
+
     const categoryRewards = rewardConfig[activeCategory] || DEFAULT_REWARDS[activeCategory];
     const points = rank === 1
       ? categoryRewards.rank1
@@ -292,33 +302,42 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       ? categoryRewards.rank2
       : categoryRewards.rank3;
 
-    const claimKey = `${activeCategory}_${rank}`;
-    const isAlreadyClaimed = (currentUser.claimedLeaderboardRewards || []).includes(claimKey);
-
     setClaimDialogData({
       isOpen: true,
       category: activeCategory,
       rank,
       points: points || (rank === 1 ? 1000 : rank === 2 ? 500 : 250),
-      isAlreadyClaimed
+      isAlreadyClaimed: false
     });
   };
 
   // Check if current user is Top 3 and hasn't claimed reward yet
   useEffect(() => {
     if (isTop3 && currentUserRank) {
-      const claimKey = `${activeCategory}_${currentUserRank}`;
-      const alreadyClaimed = (currentUser.claimedLeaderboardRewards || []).includes(claimKey);
-      if (!alreadyClaimed) {
+      if (!isCategoryAlreadyClaimed) {
         triggerClaim(currentUserRank as BadgeRank);
       }
     }
-  }, [activeCategory, currentUserRank, isTop3, currentUser.claimedLeaderboardRewards, rewardConfig]);
+  }, [activeCategory, currentUserRank, isTop3, isCategoryAlreadyClaimed, rewardConfig]);
 
   // Handle Claim
   const handleRewardClaim = async (badge: UserBadge, points: number) => {
+    // Guard ketat: cegah klaim ganda, 1 pengguna hanya boleh klaim 1x per kategori
+    const alreadyClaimed = (currentUser.claimedLeaderboardRewards || []).some(k =>
+      k === badge.category || k.startsWith(`${badge.category}_`)
+    ) || (currentUser.badges || []).some(b => b.category === badge.category);
+
+    if (alreadyClaimed) {
+      console.warn('Hadiah untuk kategori ini sudah pernah diklaim sebelumnya.');
+      return;
+    }
+
     const claimKey = `${badge.category}_${badge.rank}`;
-    const updatedClaimed = Array.from(new Set([...(currentUser.claimedLeaderboardRewards || []), claimKey]));
+    const updatedClaimed = Array.from(new Set([
+      ...(currentUser.claimedLeaderboardRewards || []),
+      claimKey,
+      badge.category
+    ]));
     const existingBadges = currentUser.badges || [];
     // 1 Kategori hanya 1 gelar/medali aktif: ganti atau timpa medali pada kategori yang sama
     const updatedBadges = [...existingBadges.filter(b => b.category !== badge.category), badge];
@@ -413,10 +432,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
   const categoryPrizes = rewardConfig[activeCategory] || DEFAULT_REWARDS[activeCategory];
 
-  const isClaimedRank1 = (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_1`);
-  const isClaimedRank2 = (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_2`);
-  const isClaimedRank3 = (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_3`);
-  const isCurrentUserRewardClaimed = currentUserRank ? (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_${currentUserRank}`) : false;
+  const isClaimedRank1 = isCategoryAlreadyClaimed || (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_1`);
+  const isClaimedRank2 = isCategoryAlreadyClaimed || (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_2`);
+  const isClaimedRank3 = isCategoryAlreadyClaimed || (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_3`);
+  const isCurrentUserRewardClaimed = isCategoryAlreadyClaimed || (currentUserRank ? (currentUser.claimedLeaderboardRewards || []).includes(`${activeCategory}_${currentUserRank}`) : false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 via-stone-50 to-stone-100/70 text-stone-900 pb-36 relative">
